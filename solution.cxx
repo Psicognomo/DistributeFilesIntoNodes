@@ -25,7 +25,6 @@ public:
     std::cout<<indent << "File '" << m_name <<"' (" << m_size <<  ")"<<std::endl;
   }
   
-  
 private:
   const std::string m_name;
   int m_size;
@@ -56,13 +55,8 @@ public:
 
   void print( const std::string& indent = "") const {
     std::cout<<indent<< "Node '" << m_name << "' (" << this->freeMemory() << "/" << m_size <<  ") [used: " << this->occupiedMemory() << "]"<<std::endl;
-    /*
     std::cout<<indent<< "  Stored Files: " << m_files.size()<<std::endl;
-    for ( const File* file : m_files )
-      file->print( indent + "    * " );
-    */
-  }
-    
+  }    
   
 private:
   const std::string m_name;
@@ -74,7 +68,7 @@ private:
 // ================================================================================================================ //
 
 int Usage();
-void allocateNodes( std::map< const File*,const Node*  >,
+void allocateNodes( std::map< const File*,const Node*  >&,
 		    std::vector< std::shared_ptr< File > >&,
 		    std::vector< std::shared_ptr< Node > >& );
 bool sortFilesBySize( std::shared_ptr< File >& FileA,std::shared_ptr< File >& FileB );
@@ -86,7 +80,7 @@ int main( int narg, char* argv[] ) {
 
   std::string inputFilesName = "";
   std::string inputNodesName = "";
-  std::string outputName = "output.txt";
+  std::string outputName = "result.txt";
 
   // ================================================================================== // 
   
@@ -201,16 +195,29 @@ int main( int narg, char* argv[] ) {
   std::map< const File*,const Node* > distributionPlan;
   allocateNodes( distributionPlan,listOfFiles,listOfNodes );
   
-  std::cout<<"List of Files:"<<std::endl;
-  for ( std::shared_ptr< File >& file : listOfFiles )
-    file->print("  ");
+  std::cout<<std::endl<<"List of Files:"<<std::endl;
+  for ( int i(0); i<listOfFiles.size(); i++ )
+    listOfFiles.at(i)->print("  ");
+
+  std::cout<<std::endl<<"List of Nodes:"<<std::endl;;
+  for ( int i(0); i<listOfNodes.size(); i++ )
+    listOfNodes.at(i)->print("  ");
   std::cout<<std::endl;
 
-  std::cout<<"List of Nodes:"<<std::endl;;
-  for ( std::shared_ptr< Node >& node : listOfNodes )
-    node->print("  ");
-  std::cout<<std::endl;
-    
+  // ================================================================================== //
+  
+  std::cout<<"Writing into output file"<<std::endl;
+
+  std::map< const File*,const Node* >::const_iterator it = distributionPlan.begin();
+  for ( ; it != distributionPlan.end(); it++ ) {
+
+    std::string message = it->first->name() + " ";
+    if ( it->second == nullptr ) message += "NULL";
+    else message += it->second->name();
+
+    output << message.c_str() << "\n";
+  }
+
   // ================================================================================== // 
 
   inputFiles.close();
@@ -228,28 +235,32 @@ int Usage() {
   std::cout<<"        -h               Print usage information"<<std::endl;
   std::cout<<"        -f <filename>    [REQUIRED] Specify input file with list of file names"<<std::endl;
   std::cout<<"        -n <filename>    [REQUIRED] Specify input file with list of nodes     "<<std::endl;
-  std::cout<<"        -o <filename>    [OPTIONAL] Specify output file (default: output.txt) "<<std::endl;
+  std::cout<<"        -o <filename>    [OPTIONAL] Specify output file (default: result.txt) "<<std::endl;
   std::cout<<""<<std::endl;
 
   return 0;
 }
 
-void allocateNodes( std::map< const File*,const Node*  > distributionPlan,
+void allocateNodes( std::map< const File*,const Node*  >& distributionPlan,
                     std::vector< std::shared_ptr< File > >& listOfFiles,
                     std::vector< std::shared_ptr< Node > >& listOfNodes ) {
 
   // Sort Files in decresing order (size)
   sort( listOfFiles.begin(),listOfFiles.end(),sortFilesBySize );
   
-  for ( std::shared_ptr< File >& file : listOfFiles ) {
+  for ( int i(0); i<listOfFiles.size(); i++ ) {
+    std::shared_ptr< File >& file = listOfFiles.at(i);
     distributionPlan[ file.get() ] = nullptr;
-
+    
     // Sort Nodes according to available memory
+    // TO BE CHANGED
     std::sort( listOfNodes.begin(),listOfNodes.end(),sortNodesByAvailableMemory );
     
-    for ( std::shared_ptr< Node >& node : listOfNodes ) {
+    for ( int j(0); j<listOfNodes.size(); j++ ) {
+      std::shared_ptr< Node >& node = listOfNodes.at(j);
       if ( node->canAccept( file.get() ) == false ) continue;
       node->add( file.get() );
+      distributionPlan[ file.get() ] = node.get(); 
       break;
     }
 
