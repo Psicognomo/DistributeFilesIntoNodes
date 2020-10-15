@@ -1,4 +1,4 @@
-
+ 
 #include "iostream"
 #include "fstream"
 #include "string"
@@ -68,7 +68,7 @@ private:
 // ================================================================================================================ //
 
 int Usage();
-void allocateNodes( std::map< const File*,const Node*  >&,
+void allocateNodes( std::map< std::string,std::string  >&,
 		    std::vector< std::shared_ptr< File > >&,
 		    std::vector< std::shared_ptr< Node > >& );
 bool sortFilesBySize( std::shared_ptr< File >& FileA,std::shared_ptr< File >& FileB );
@@ -83,11 +83,6 @@ int main( int narg, char* argv[] ) {
   std::string outputName = "result.txt";
 
   // ================================================================================== // 
-  
-  if ( narg == 1 ) {
-    std::cout<<"No arguments have been specified!"<< std::endl;
-    return Usage();
-  }
   
   int c;
   while ( (c = getopt (narg, argv, "f:n:o:h") ) != -1) {
@@ -135,21 +130,21 @@ int main( int narg, char* argv[] ) {
   inputFiles.open( inputFilesName.c_str() );
   if ( not inputFiles.is_open() ) {
     std::cout<<"ERROR: Cannot open input file: "<<inputFilesName<<std::endl;
-    return 0;
+    return Usage();
   }
 
   std::ifstream inputNodes;
   inputNodes.open( inputNodesName.c_str() );
   if ( not inputNodes.is_open() ) {
     std::cout<<"ERROR: Cannot open input file: "<<inputNodesName<<std::endl;
-    return 0;
+    return Usage();
   }
 
   std::ofstream output;
   output.open( outputName.c_str() );
   if ( not output.is_open() ) {
     std::cout<<"ERROR: Cannot open output file: "<<outputName<<std::endl;
-    return 0;
+    return Usage();
   }
   
   // ================================================================================== //
@@ -166,7 +161,7 @@ int main( int narg, char* argv[] ) {
     std::string name, size;
     if ( not (iss >> name >> size) ) {
       std::cout<<"ERROR: Issues while reading input file: " << inputNodesName << std::endl;
-      return 0;
+      return Usage();
     } 
 
     std::shared_ptr< Node > toAdd( new Node( name,std::stoi(size) ) );
@@ -181,7 +176,7 @@ int main( int narg, char* argv[] ) {
     std::string name, size;
     if ( not (iss >> name >> size) ) {
       std::cout<<"ERROR: Issues while reading input file: " << inputFilesName << std::endl;
-      return 0;
+      return Usage();
     }
 
     std::shared_ptr< File > toAdd( new File( name,std::stoi(size) ) );
@@ -192,7 +187,7 @@ int main( int narg, char* argv[] ) {
   std::cout<<"Found a total of " << listOfFiles.size() << " Files "<<std::endl;
   std::cout<<"Distributing..."<<std::endl;
   
-  std::map< const File*,const Node* > distributionPlan;
+  std::map< std::string,std::string > distributionPlan;
   allocateNodes( distributionPlan,listOfFiles,listOfNodes );
   
   std::cout<<std::endl<<"List of Files:"<<std::endl;
@@ -208,13 +203,9 @@ int main( int narg, char* argv[] ) {
   
   std::cout<<"Writing into output file"<<std::endl;
 
-  std::map< const File*,const Node* >::const_iterator it = distributionPlan.begin();
+  std::map< std::string,std::string >::const_iterator it = distributionPlan.begin();
   for ( ; it != distributionPlan.end(); it++ ) {
-
-    std::string message = it->first->name() + " ";
-    if ( it->second == nullptr ) message += "NULL";
-    else message += it->second->name();
-
+    std::string message = it->first + " " + it->second;
     output << message.c_str() << "\n";
   }
 
@@ -241,29 +232,48 @@ int Usage() {
   return 0;
 }
 
-void allocateNodes( std::map< const File*,const Node*  >& distributionPlan,
+void allocateNodes( std::map< std::string,std::string  >& distributionPlan,
                     std::vector< std::shared_ptr< File > >& listOfFiles,
                     std::vector< std::shared_ptr< Node > >& listOfNodes ) {
 
   // Sort Files in decresing order (size)
-  sort( listOfFiles.begin(),listOfFiles.end(),sortFilesBySize );
+  std::sort( listOfFiles.begin(),listOfFiles.end(),sortFilesBySize );
+  // Sort Nodes according to available memory (increasing order)
+  std::sort( listOfNodes.begin(),listOfNodes.end(),sortNodesByAvailableMemory );
+
   
   for ( int i(0); i<listOfFiles.size(); i++ ) {
     std::shared_ptr< File >& file = listOfFiles.at(i);
-    distributionPlan[ file.get() ] = nullptr;
+    distributionPlan[ file.get()->name() ] = "NULL";
     
-    // Sort Nodes according to available memory
-    // TO BE CHANGED
-    std::sort( listOfNodes.begin(),listOfNodes.end(),sortNodesByAvailableMemory );
-    
+    int selectedNodePosition = -1;    
+    int newNodePosition = listOfNodes.size() - 1;
+  
     for ( int j(0); j<listOfNodes.size(); j++ ) {
       std::shared_ptr< Node >& node = listOfNodes.at(j);
       if ( node->canAccept( file.get() ) == false ) continue;
+
       node->add( file.get() );
-      distributionPlan[ file.get() ] = node.get(); 
+      distributionPlan[ file.get()->name() ] = node.get()->name(); 
+      selectedNodePosition = j;
+
+      // Find new position
+      for ( int m(j+1); m<listOfNodes.size(); m++ ) {
+	std::shared_ptr< Node >& other = listOfNodes.at(m) ;
+	if ( node->occupiedMemory() > other->occupiedMemory() ) continue;
+	if ( node->occupiedMemory() == other->occupiedMemory() ) 
+	  if ( node->freeMemory() > other->freeMemory() ) continue;
+	newNodePosition = m;
+      }
+
       break;
     }
 
+    if ( selectedNodePosition == -1 ) continue;
+
+    std::shared_ptr< Node > toAdd = listOfNodes.at( selectedNodePosition );
+    listOfNodes.erase( listOfNodes.begin() + selectedNodePosition );    
+    listOfNodes.insert( listOfNodes.begin() + newNodePosition , toAdd );
   }
 
 }
