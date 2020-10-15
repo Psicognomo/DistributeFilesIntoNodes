@@ -1,4 +1,4 @@
- 
+
 #include "iostream"
 #include "fstream"
 #include "string"
@@ -56,6 +56,8 @@ public:
   void print( const std::string& indent = "") const {
     std::cout<<indent<< "Node '" << m_name << "' (" << this->freeMemory() << "/" << m_size <<  ") [used: " << this->occupiedMemory() << "]"<<std::endl;
     std::cout<<indent<< "  Stored Files: " << m_files.size()<<std::endl;
+    for ( int i(0); i<m_files.size(); i++ ) 
+      m_files.at(i)->print( "    * " );
   }    
   
 private:
@@ -190,18 +192,9 @@ int main( int narg, char* argv[] ) {
   std::map< std::string,std::string > distributionPlan;
   allocateNodes( distributionPlan,listOfFiles,listOfNodes );
   
-  std::cout<<std::endl<<"List of Files:"<<std::endl;
-  for ( int i(0); i<listOfFiles.size(); i++ )
-    listOfFiles.at(i)->print("  ");
-
-  std::cout<<std::endl<<"List of Nodes:"<<std::endl;;
-  for ( int i(0); i<listOfNodes.size(); i++ )
-    listOfNodes.at(i)->print("  ");
-  std::cout<<std::endl;
-
   // ================================================================================== //
   
-  std::cout<<"Writing into output file"<<std::endl;
+  std::cout<<"Writing into output file"<<std::endl<<std::endl;
 
   std::map< std::string,std::string >::const_iterator it = distributionPlan.begin();
   for ( ; it != distributionPlan.end(); it++ ) {
