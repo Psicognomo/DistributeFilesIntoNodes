@@ -260,20 +260,23 @@ void allocateNodes( std::map< std::string,std::string  >& distributionPlan,
       // Find new position
       for ( int m(j+1); m<listOfNodes.size(); m++ ) {
 	std::shared_ptr< Node >& other = listOfNodes.at(m) ;
+
 	if ( node->occupiedMemory() > other->occupiedMemory() ) continue;
 	if ( node->occupiedMemory() == other->occupiedMemory() ) 
 	  if ( node->freeMemory() > other->freeMemory() ) continue;
 	newNodePosition = m;
+	break;
       }
 
       break;
     }
 
     if ( selectedNodePosition == -1 ) continue;
+    if ( selectedNodePosition == newNodePosition ) continue;
 
     std::shared_ptr< Node > toAdd = listOfNodes.at( selectedNodePosition );
+    listOfNodes.insert( listOfNodes.begin() + newNodePosition + 1 , toAdd );
     listOfNodes.erase( listOfNodes.begin() + selectedNodePosition );    
-    listOfNodes.insert( listOfNodes.begin() + newNodePosition , toAdd );
   }
 
 }
