@@ -72,7 +72,7 @@ void allocateNodes( std::map< std::string,std::string  >&,
 		    std::vector< std::shared_ptr< File > >&,
 		    std::vector< std::shared_ptr< Node > >& );
 bool sortFilesBySize( std::shared_ptr< File >& FileA,std::shared_ptr< File >& FileB );
-bool sortNodesByAvailableMemory( std::shared_ptr< Node >& NodeA,std::shared_ptr< Node >& NodeB );
+bool sortNodesByMemory( std::shared_ptr< Node >& NodeA,std::shared_ptr< Node >& NodeB );
 
 // ================================================================================================================ // 
 
@@ -227,7 +227,7 @@ void allocateNodes( std::map< std::string,std::string  >& distributionPlan,
   // Sort Files in decresing order (size)
   std::sort( listOfFiles.begin(),listOfFiles.end(),sortFilesBySize );
   // Sort Nodes according to available memory (increasing order)
-  std::sort( listOfNodes.begin(),listOfNodes.end(),sortNodesByAvailableMemory );
+  std::sort( listOfNodes.begin(),listOfNodes.end(),sortNodesByMemory );
 
   
   for ( int i(0); i<listOfFiles.size(); i++ ) {
@@ -274,7 +274,7 @@ bool sortFilesBySize( std::shared_ptr< File >& FileA,std::shared_ptr< File >& Fi
   return false;
 }
 
-bool sortNodesByAvailableMemory (std::shared_ptr< Node >& NodeA,std::shared_ptr< Node >& NodeB ) {
+bool sortNodesByMemory (std::shared_ptr< Node >& NodeA,std::shared_ptr< Node >& NodeB ) {
   if ( NodeA->occupiedMemory() < NodeB->occupiedMemory() ) return true;
   if ( NodeA->occupiedMemory() > NodeB->occupiedMemory() ) return false;
   if ( NodeA->freeMemory() > NodeB->freeMemory() ) return true;
