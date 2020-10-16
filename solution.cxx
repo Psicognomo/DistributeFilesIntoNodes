@@ -109,7 +109,6 @@ int main( int narg, char* argv[] ) {
     }
   }
 
-  // ================================================================================== // 
   
   if ( inputFilesName.empty() ) {
     std::cout<<"### Input missing: file with file names not specified!"<<std::endl;
@@ -126,6 +125,8 @@ int main( int narg, char* argv[] ) {
   std::cout<<"   INPUT : file with nodes     : " << inputNodesName << std::endl;
   std::cout<<"   OUTPUT: output file         : " << outputName     << std::endl << std::endl;
 
+  // ================================================================================== //
+  
   std::vector< std::shared_ptr< File > > listOfFiles;
   std::vector< std::shared_ptr< Node > >  listOfNodes;
 
@@ -147,11 +148,17 @@ int main( int narg, char* argv[] ) {
   
   std::cout<<"Found a total of " << listOfNodes.size() << " Nodes "<<std::endl;
   std::cout<<"Found a total of " << listOfFiles.size() << " Files "<<std::endl;
-  std::cout<<"Distributing..."<<std::endl;
+
+  // ================================================================================== //
   
+  std::cout<<"Distributing..."<<std::endl;
   std::map< std::string,std::string > distributionPlan;
   allocateNodes( distributionPlan,listOfFiles,listOfNodes );
 
+  std::cout<<std::endl;
+  for ( auto el : listOfNodes )
+    el->print();
+  
   // ================================================================================== //
   
   std::cout<<"Writing into output file"<<std::endl<<std::endl;
@@ -161,8 +168,6 @@ int main( int narg, char* argv[] ) {
     std::string message = it->first + " " + it->second;
     output << message.c_str() << "\n";
   }
-
-  // ================================================================================== // 
 
   output.close();  
 }
@@ -271,10 +276,8 @@ bool sortFilesBySize( std::shared_ptr< File >& FileA,std::shared_ptr< File >& Fi
 
 bool sortNodesByAvailableMemory (std::shared_ptr< Node >& NodeA,std::shared_ptr< Node >& NodeB ) {
   if ( NodeA->occupiedMemory() < NodeB->occupiedMemory() ) return true;
-  else if ( NodeA->occupiedMemory() > NodeB->occupiedMemory() ) return false;
-  else {
-    if ( NodeA->freeMemory() > NodeB->freeMemory() ) return true;
-    return false;
-  }
+  if ( NodeA->occupiedMemory() > NodeB->occupiedMemory() ) return false;
+  if ( NodeA->freeMemory() > NodeB->freeMemory() ) return true;
+  return false;
 }
 
