@@ -68,6 +68,7 @@ private:
 // ================================================================================================================ //
 
 int Usage();
+template< class T > bool processFile( const std::string&,std::vector< std::shared_ptr< T > >& );
 void allocateNodes( std::map< std::string,std::string  >&,
 		    std::vector< std::shared_ptr< File > >&,
 		    std::vector< std::shared_ptr< Node > >& );
@@ -126,64 +127,22 @@ int main( int narg, char* argv[] ) {
   std::cout<<"   INPUT : file with nodes     : " << inputNodesName << std::endl;
   std::cout<<"   OUTPUT: output file         : " << outputName     << std::endl << std::endl;
 
-  std::ifstream inputFiles;
-  inputFiles.open( inputFilesName.c_str() );
-  if ( not inputFiles.is_open() ) {
-    std::cout<<"ERROR: Cannot open input file: "<<inputFilesName<<std::endl;
-    return Usage();
-  }
-
-  std::ifstream inputNodes;
-  inputNodes.open( inputNodesName.c_str() );
-  if ( not inputNodes.is_open() ) {
-    std::cout<<"ERROR: Cannot open input file: "<<inputNodesName<<std::endl;
-    return Usage();
-  }
-
-  std::ofstream output;
-  output.open( outputName.c_str() );
-  if ( not output.is_open() ) {
-    std::cout<<"ERROR: Cannot open output file: "<<outputName<<std::endl;
-    return Usage();
-  }
-  
-  // ================================================================================== //
-
   std::vector< std::shared_ptr< File > > listOfFiles;
   std::vector< std::shared_ptr< Node > >  listOfNodes;
 
   // Read Nodes
-  std::string line;
-  try {
-    while ( std::getline(inputNodes, line) ) {
-      if ( line.find("#",0) == 0 ) continue; 
-      
-      std::istringstream iss( line );
-      std::string name, size;
-      iss >> name >> size;
-      
-      std::shared_ptr< Node > toAdd( new Node( name,std::stoi(size) ) );
-      listOfNodes.push_back( toAdd );
-    }
-  } catch ( ... ) {
-    std::cout<<"ERROR: Issues while reading input file: " << inputNodesName << std::endl;
+  if ( not processFile( inputNodesName,listOfNodes ) )
     return Usage();
-  }
-  
-  // Read Files
-  try {
-    while( std::getline(inputFiles, line) ) {
-      if ( line.find("#",0) == 0 ) continue;
-      
-      std::istringstream iss( line );
-      std::string name, size;
-      iss >> name >> size;
 
-      std::shared_ptr< File > toAdd( new File( name,std::stoi(size) ) );
-      listOfFiles.push_back( toAdd );
-    }
-  } catch ( ... ) {
-    std::cout<<"ERROR: Issues while reading input file: " << inputFilesName << std::endl;
+  // Read Files 
+  if ( not processFile( inputFilesName,listOfFiles ) )
+    return Usage();
+
+  // Create output
+  std::ofstream output;
+  output.open( outputName.c_str() );
+  if ( not output.is_open() ) {
+    std::cout<<"ERROR: Cannot open output file: "<<outputName<<std::endl;
     return Usage();
   }
   
@@ -206,8 +165,6 @@ int main( int narg, char* argv[] ) {
 
   // ================================================================================== // 
 
-  inputFiles.close();
-  inputNodes.close();
   output.close();  
 }
 
@@ -225,6 +182,38 @@ int Usage() {
   std::cout<<""<<std::endl;
 
   return 0;
+}
+
+template< class T > bool processFile( const std::string& fileName,
+				      std::vector< std::shared_ptr< T > >& objectCollection ) {
+
+  std::ifstream inputFiles;
+  inputFiles.open( fileName.c_str() );
+  if ( not inputFiles.is_open() ) {
+    std::cout<<"ERROR: Cannot open input file: "<<fileName<<std::endl;
+    return false;
+  }
+
+  std::string line;
+  try {
+    while ( std::getline(inputFiles, line) ) {
+      if ( line.find("#",0) == 0 ) continue;
+      
+      std::istringstream iss( line );
+      std::string name, size;
+      iss >> name >> size;
+      
+      std::shared_ptr< T > toAdd( new T( name,std::stoi(size) ) );
+      objectCollection.push_back( toAdd );
+    }
+  } catch ( ... ) {
+    std::cout<<"ERROR: Issues while reading input file: " << fileName << std::endl;
+    inputFiles.close();
+    return false;
+  }
+  
+  inputFiles.close();
+  return true;
 }
 
 void allocateNodes( std::map< std::string,std::string  >& distributionPlan,
