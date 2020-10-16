@@ -1,14 +1,12 @@
 
 #include "iostream"
+#include "unistd.h"
+#include "memory"
 #include "fstream"
-#include "string"
-#include "vector"
 #include "sstream"
+#include "sstream"
+#include "vector"
 #include "map"
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
 
 // ================================================================================================================ //
 
@@ -191,7 +189,7 @@ int main( int narg, char* argv[] ) {
   
   std::map< std::string,std::string > distributionPlan;
   allocateNodes( distributionPlan,listOfFiles,listOfNodes );
-  
+
   // ================================================================================== //
   
   std::cout<<"Writing into output file"<<std::endl<<std::endl;
