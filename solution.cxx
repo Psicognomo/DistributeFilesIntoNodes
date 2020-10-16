@@ -154,35 +154,39 @@ int main( int narg, char* argv[] ) {
 
   // Read Nodes
   std::string line;
-  while ( std::getline(inputNodes, line) ) {
-    if ( line.find("#",0) == 0 ) continue; 
-	
-    std::istringstream iss( line );
-    std::string name, size;
-    if ( not (iss >> name >> size) ) {
-      std::cout<<"ERROR: Issues while reading input file: " << inputNodesName << std::endl;
-      return Usage();
-    } 
-
-    std::shared_ptr< Node > toAdd( new Node( name,std::stoi(size) ) );
-    listOfNodes.push_back( toAdd );
-  }
-
-  // Read Files
-  while( std::getline(inputFiles, line) ) {
-    if ( line.find("#",0) == 0 ) continue;
-
-    std::istringstream iss( line );
-    std::string name, size;
-    if ( not (iss >> name >> size) ) {
-      std::cout<<"ERROR: Issues while reading input file: " << inputFilesName << std::endl;
-      return Usage();
+  try {
+    while ( std::getline(inputNodes, line) ) {
+      if ( line.find("#",0) == 0 ) continue; 
+      
+      std::istringstream iss( line );
+      std::string name, size;
+      iss >> name >> size;
+      
+      std::shared_ptr< Node > toAdd( new Node( name,std::stoi(size) ) );
+      listOfNodes.push_back( toAdd );
     }
-
-    std::shared_ptr< File > toAdd( new File( name,std::stoi(size) ) );
-    listOfFiles.push_back( toAdd );
+  } catch ( ... ) {
+    std::cout<<"ERROR: Issues while reading input file: " << inputNodesName << std::endl;
+    return Usage();
   }
+  
+  // Read Files
+  try {
+    while( std::getline(inputFiles, line) ) {
+      if ( line.find("#",0) == 0 ) continue;
+      
+      std::istringstream iss( line );
+      std::string name, size;
+      iss >> name >> size;
 
+      std::shared_ptr< File > toAdd( new File( name,std::stoi(size) ) );
+      listOfFiles.push_back( toAdd );
+    }
+  } catch ( ... ) {
+    std::cout<<"ERROR: Issues while reading input file: " << inputFilesName << std::endl;
+    return Usage();
+  }
+  
   std::cout<<"Found a total of " << listOfNodes.size() << " Nodes "<<std::endl;
   std::cout<<"Found a total of " << listOfFiles.size() << " Files "<<std::endl;
   std::cout<<"Distributing..."<<std::endl;
