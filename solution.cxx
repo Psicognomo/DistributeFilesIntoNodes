@@ -206,7 +206,13 @@ template< class T > bool processFile( const std::string& fileName,
       std::istringstream iss( line );
       std::string name, size;
       iss >> name >> size;
-      
+
+      int sizeInt = std::stoi(size);
+      if ( sizeInt < 0 ) {
+	std::cout<<"ERROR: Size is negative: something is wrong in the input file" << std::endl;
+	return false;
+      }
+
       std::shared_ptr< T > toAdd( new T( name,std::stoi(size) ) );
       objectCollection.push_back( toAdd );
     }
