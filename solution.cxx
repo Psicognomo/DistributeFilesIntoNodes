@@ -240,38 +240,28 @@ void allocateNodes( std::map< std::string,std::string  >& distributionPlan,
   for ( int i(0); i<listOfFiles.size(); i++ ) {
     std::shared_ptr< File >& file = listOfFiles.at(i);
     distributionPlan[ file.get()->name() ] = "NULL";
-    
-    int selectedNodePosition = -1;    
-    int newNodePosition = listOfNodes.size() - 1;
-  
+
+    // Runnin on Nodes to allocate the file
     for ( int j(0); j<listOfNodes.size(); j++ ) {
       std::shared_ptr< Node >& node = listOfNodes.at(j);
       if ( node->canAccept( file.get() ) == false ) continue;
 
       node->add( file.get() );
       distributionPlan[ file.get()->name() ] = node.get()->name(); 
-      selectedNodePosition = j;
 
-      // Find new position
+      // Place the modified Node into the (new) correct position
       for ( int m(j+1); m<listOfNodes.size(); m++ ) {
 	std::shared_ptr< Node >& other = listOfNodes.at(m) ;
 
-	if ( node->occupiedMemory() > other->occupiedMemory() ) continue;
-	if ( node->occupiedMemory() == other->occupiedMemory() ) 
-	  if ( node->freeMemory() > other->freeMemory() ) continue;
-	newNodePosition = m;
-	break;
+	if ( node->occupiedMemory() > other->occupiedMemory() )
+	  std::swap( listOfNodes.at( m-1 ),listOfNodes.at( m ) );
+	else if ( node->occupiedMemory() == other->occupiedMemory() &&
+		  node->freeMemory() > other->freeMemory() )
+	  std::swap( listOfNodes.at( m-1 ),listOfNodes.at( m ) );
       }
-
+      
       break;
     }
-
-    if ( selectedNodePosition == -1 ) continue;
-    if ( selectedNodePosition == newNodePosition ) continue;
-
-    std::shared_ptr< Node > toAdd = listOfNodes.at( selectedNodePosition );
-    listOfNodes.insert( listOfNodes.begin() + newNodePosition + 1 , toAdd );
-    listOfNodes.erase( listOfNodes.begin() + selectedNodePosition );    
   }
 
 }
