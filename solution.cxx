@@ -205,12 +205,22 @@ template< class T > bool processFile( const std::string& fileName,
       if ( line.find("#",0) == 0 ) continue;
       
       std::istringstream iss( line );
-      std::string name, size;
-      iss >> name >> size;
+      std::string name = "";
+      std::string size = "";
+      std::string otherArgument = "";
+      iss >> name >> size >> otherArgument;
 
+      if ( not otherArgument.empty() ) {
+	std::cout<<"ERROR: Too many arguments in the line: something is wrong in the input file '" << fileName << "'" << std::endl;
+	std::cout<<"ERROR: Faulty line: " << iss.str() << std::endl;
+	inputFiles.close();
+        return false;
+      } 
+      
       int sizeInt = std::stoi(size);
       if ( sizeInt < 0 ) {
-	std::cout<<"ERROR: Size is negative: something is wrong in the input file" << std::endl;
+	std::cout<<"ERROR: Size is negative: something is wrong in the input file '" << fileName << "'" << std::endl;
+	std::cout<<"ERROR: Faulty line: " << iss.str() << std::endl;
 	inputFiles.close();
 	return false;
       }
