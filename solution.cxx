@@ -25,7 +25,7 @@ public:
   
 private:
   const std::string m_name;
-  int m_size;
+  const int m_size;
 };
 
 
@@ -60,7 +60,7 @@ public:
   
 private:
   const std::string m_name;
-  int m_size;
+  const int m_size;
   int m_occupiedMemory;
   std::vector< const File* > m_files; 
 };
