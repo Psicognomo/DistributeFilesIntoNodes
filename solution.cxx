@@ -254,11 +254,10 @@ void allocateNodes( std::map< std::string,std::string  >& distributionPlan,
       for ( int m(j+1); m<listOfNodes.size(); m++ ) {
 	std::shared_ptr< Node >& other = listOfNodes.at(m) ;
 
-	if ( node->occupiedMemory() > other->occupiedMemory() )
-	  std::swap( listOfNodes.at( m-1 ),listOfNodes.at( m ) );
-	else if ( node->occupiedMemory() == other->occupiedMemory() &&
-		  node->freeMemory() > other->freeMemory() )
-	  std::swap( listOfNodes.at( m-1 ),listOfNodes.at( m ) );
+	if ( node->occupiedMemory() < other->occupiedMemory() ) continue;
+	if ( node->occupiedMemory() == other->occupiedMemory() &&
+	     node->freeMemory() <= other->freeMemory() ) continue;
+	std::swap( listOfNodes.at( m-1 ),listOfNodes.at( m ) );
       }
       
       break;
