@@ -155,10 +155,6 @@ int main( int narg, char* argv[] ) {
   std::cout<<"Distributing..."<<std::endl;
   std::map< std::string,std::string > distributionPlan;
   allocateNodes( distributionPlan,listOfFiles,listOfNodes );
-
-  std::cout<<std::endl;
-  for ( auto el : listOfNodes )
-    el->print();
   
   // ================================================================================== //
   
@@ -242,12 +238,14 @@ void allocateNodes( std::map< std::string,std::string  >& distributionPlan,
                     std::vector< std::shared_ptr< File > >& listOfFiles,
                     std::vector< std::shared_ptr< Node > >& listOfNodes ) {
 
-  // Sort Files in decresing order (size)
+  // Sort Files in decresing order (size). Big files first.
   std::sort( listOfFiles.begin(),listOfFiles.end(),sortFilesBySize );
-  // Sort Nodes according to available memory (increasing order)
+  // Sort Nodes according to node memory. Nodes with big occupied memory last.
+  // In case of two nodes with same occupied memory, the node with big free memory goes first.
   std::sort( listOfNodes.begin(),listOfNodes.end(),sortNodesByMemory );
 
-  
+
+  // Running on files
   for ( int i(0); i<listOfFiles.size(); i++ ) {
     std::shared_ptr< File >& file = listOfFiles.at(i);
     distributionPlan[ file.get()->name() ] = "NULL";
