@@ -248,7 +248,7 @@ void allocateNodes( std::map< std::string,std::string  >& distributionPlan,
   // Running on files
   for ( int i(0); i<listOfFiles.size(); i++ ) {
     std::shared_ptr< File >& file = listOfFiles.at(i);
-    distributionPlan[ file.get()->name() ] = "NULL";
+    distributionPlan[ file->name() ] = "NULL";
 
     // Runnin on Nodes to allocate the file
     for ( int j(0); j<listOfNodes.size(); j++ ) {
@@ -256,7 +256,7 @@ void allocateNodes( std::map< std::string,std::string  >& distributionPlan,
       if ( node->canAccept( file.get() ) == false ) continue;
 
       node->add( file.get() );
-      distributionPlan[ file.get()->name() ] = node.get()->name(); 
+      distributionPlan[ file->name() ] = node->name(); 
 
       // Place the modified Node into the (new) correct position
       for ( int m(j+1); m<listOfNodes.size(); m++ ) {
