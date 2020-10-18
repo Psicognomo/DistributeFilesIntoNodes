@@ -155,7 +155,7 @@ int main( int narg, char* argv[] ) {
   std::cout<<"Distributing..."<<std::endl;
   std::map< std::string,std::string > distributionPlan;
   allocateNodes( distributionPlan,listOfFiles,listOfNodes );
-  
+
   // ================================================================================== //
   
   std::cout<<"Writing into output file"<<std::endl<<std::endl;
@@ -252,7 +252,7 @@ void allocateNodes( std::map< std::string,std::string  >& distributionPlan,
 
     // Runnin on Nodes to allocate the file
     for ( int j(0); j<listOfNodes.size(); j++ ) {
-      std::shared_ptr< Node >& node = listOfNodes.at(j);
+      std::shared_ptr< Node > node = listOfNodes.at(j);
       if ( node->canAccept( file.get() ) == false ) continue;
 
       node->add( file.get() );
@@ -260,14 +260,14 @@ void allocateNodes( std::map< std::string,std::string  >& distributionPlan,
 
       // Place the modified Node into the (new) correct position
       for ( int m(j+1); m<listOfNodes.size(); m++ ) {
-	std::shared_ptr< Node >& other = listOfNodes.at(m) ;
+	std::shared_ptr< Node > other = listOfNodes.at(m) ;
 
-	if ( node->occupiedMemory() < other->occupiedMemory() ) continue;
+	if ( node->occupiedMemory() < other->occupiedMemory() ) break;
 	if ( node->occupiedMemory() == other->occupiedMemory() &&
-	     node->freeMemory() <= other->freeMemory() ) continue;
+	     node->freeMemory() <= other->freeMemory() ) break;
 	std::swap( listOfNodes.at( m-1 ),listOfNodes.at( m ) );
       }
-      
+
       break;
     }
   }
