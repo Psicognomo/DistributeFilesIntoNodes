@@ -247,20 +247,20 @@ void allocateNodes( std::map< std::string,std::string  >& distributionPlan,
 
   // Running on files
   for ( int i(0); i<listOfFiles.size(); i++ ) {
-    std::shared_ptr< File >& file = listOfFiles.at(i);
+    const File *file = listOfFiles.at(i).get();
     distributionPlan[ file->name() ] = "NULL";
 
     // Runnin on Nodes to allocate the file
     for ( int j(0); j<listOfNodes.size(); j++ ) {
-      std::shared_ptr< Node > node = listOfNodes.at(j);
-      if ( node->canAccept( file.get() ) == false ) continue;
+      Node *node = listOfNodes.at(j).get();
+      if ( node->canAccept( file ) == false ) continue;
 
-      node->add( file.get() );
+      node->add( file );
       distributionPlan[ file->name() ] = node->name(); 
 
       // Place the modified Node into the (new) correct position
       for ( int m(j+1); m<listOfNodes.size(); m++ ) {
-	std::shared_ptr< Node > other = listOfNodes.at(m) ;
+	Node *other = listOfNodes.at(m).get();
 
 	if ( node->occupiedMemory() < other->occupiedMemory() ) break;
 	if ( node->occupiedMemory() == other->occupiedMemory() &&
