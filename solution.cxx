@@ -195,9 +195,10 @@ template< class T > bool processFile( const std::string& fileName,
     return false;
   }
 
-  std::string line;
+  std::string line = "";
   try {
     while ( std::getline(inputFiles, line) ) {
+      // Skip the line if it is a comment
       if ( line.find("#",0) == 0 ) continue;
       
       std::istringstream iss( line );
@@ -206,13 +207,20 @@ template< class T > bool processFile( const std::string& fileName,
       std::string otherArgument = "";
       iss >> name >> size >> otherArgument;
 
+      // This happens if the line is empty, or if it contains only white spaces
+      // Skip the line in these cases
+      if ( name.empty() ) continue;
+
+      // Check if there are additional elements
+      // This should not happen
       if ( not otherArgument.empty() ) {
 	std::cout<<"ERROR: Too many arguments in the line: something is wrong in the input file '" << fileName << "'" << std::endl;
 	std::cout<<"ERROR: Faulty line: " << iss.str() << std::endl;
 	inputFiles.close();
         return false;
       } 
-      
+
+      // Check the size is a positive integer
       int sizeInt = std::stoi(size);
       if ( sizeInt < 0 ) {
 	std::cout<<"ERROR: Size is negative: something is wrong in the input file '" << fileName << "'" << std::endl;
@@ -225,7 +233,7 @@ template< class T > bool processFile( const std::string& fileName,
       objectCollection.push_back( toAdd );
     }
   } catch ( ... ) {
-    std::cout<<"ERROR: Issues while reading input file: " << fileName << std::endl;
+    std::cout<<"ERROR: Issues while reading input file: '" << fileName << "'" << std::endl;
     inputFiles.close();
     return false;
   }
@@ -250,7 +258,7 @@ void allocateNodes( std::map< std::string,std::string  >& distributionPlan,
     const File *file = listOfFiles.at(i).get();
     distributionPlan[ file->name() ] = "NULL";
 
-    // Runnin on Nodes to allocate the file
+    // Running on Nodes to allocate the file
     for ( int j(0); j<listOfNodes.size(); j++ ) {
       Node *node = listOfNodes.at(j).get();
       if ( node->canAccept( file ) == false ) continue;
