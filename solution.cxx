@@ -171,9 +171,9 @@ int Usage() {
   std::cout<<"USAGE:  ./solution <OPTIONS>"<<std::endl;
   std::cout<<"  OPTIONS:"<<std::endl;
   std::cout<<"        -h               Print usage information"<<std::endl;
-  std::cout<<"        -f <filename>    [REQUIRED] Specify input file with list of file names"<<std::endl;
-  std::cout<<"        -n <filename>    [REQUIRED] Specify input file with list of nodes     "<<std::endl;
-  std::cout<<"        -o <filename>    [OPTIONAL] Specify output file (default: result.txt) "<<std::endl;
+  std::cout<<"        -f <filename>    [REQUIRED] Specify input file with list of file names     "<<std::endl;
+  std::cout<<"        -n <filename>    [REQUIRED] Specify input file with list of nodes          "<<std::endl;
+  std::cout<<"        -o <filename>    [OPTIONAL] Specify output file (default: standard output) "<<std::endl;
   std::cout<<""<<std::endl;
 
   return 0;
