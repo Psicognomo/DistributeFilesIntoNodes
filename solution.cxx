@@ -81,7 +81,7 @@ int main( int narg, char* argv[] ) {
 
   std::string inputFilesName = "";
   std::string inputNodesName = "";
-  std::string outputName = "result.txt";
+  std::string outputName = "";
 
   // ================================================================================== // 
   
@@ -121,11 +121,6 @@ int main( int narg, char* argv[] ) {
     return Usage();
   }
 
-  std::cout<<std::endl << "I/O SUMMARY:"<<std::endl;
-  std::cout<<"   INPUT : file with file names: " << inputFilesName << std::endl;
-  std::cout<<"   INPUT : file with nodes     : " << inputNodesName << std::endl;
-  std::cout<<"   OUTPUT: output file         : " << outputName     << std::endl << std::endl;
-
   // ================================================================================== //
   
   std::vector< std::shared_ptr< File > > listOfFiles;
@@ -141,29 +136,28 @@ int main( int narg, char* argv[] ) {
 
   // Create output
   std::ofstream output;
-  output.open( outputName.c_str() );
-  if ( not output.is_open() ) {
-    std::cout<<"ERROR: Cannot open output file: "<<outputName<<std::endl;
-    return Usage();
+  if ( not outputName.empty() ) {
+    output.open( outputName.c_str() );
+    if ( not output.is_open() ) {
+      std::cout<<"ERROR: Cannot open output file: "<<outputName<<std::endl;
+      return Usage();
+    }
   }
   
-  std::cout<<"Found a total of " << listOfNodes.size() << " Nodes "<<std::endl;
-  std::cout<<"Found a total of " << listOfFiles.size() << " Files "<<std::endl;
-
   // ================================================================================== //
-  
-  std::cout<<"Distributing..."<<std::endl;
+
+  // Distributing...
   std::map< std::string,std::string > distributionPlan;
   allocateNodes( distributionPlan,listOfFiles,listOfNodes );
 
   // ================================================================================== //
   
-  std::cout<<"Writing into output file"<<std::endl<<std::endl;
-
+  // Writing the output
   std::map< std::string,std::string >::const_iterator it = distributionPlan.begin();
   for ( ; it != distributionPlan.end(); it++ ) {
     std::string message = it->first + " " + it->second;
-    output << message.c_str() << "\n";
+    if ( not outputName.empty() ) output << message.c_str() << "\n";
+    else std::cout << message.c_str() << "\n";
   }
 
   output.close();  
