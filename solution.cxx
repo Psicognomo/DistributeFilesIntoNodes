@@ -8,9 +8,6 @@
 #include <algorithm>
 #include <unordered_map>
 
-#include <chrono>
-using namespace std::chrono;
-
 // ================================================================================================================ //
 
 class File {
@@ -80,7 +77,7 @@ private:
 
 int Usage();
 template< class T > bool processFile( const std::string&,std::vector<T>& );
-void allocateNodes( std::unordered_map< std::string,std::string  >&,
+void allocateNodes( std::unordered_map< std::size_t, std::size_t  >&,
 		    std::vector<File>&,
 		    std::vector<Node>& );
 bool sortFilesBySize( const File& FileA, const File& FileB );
@@ -89,8 +86,6 @@ bool sortNodesByMemory( const Node& NodeA,const Node& NodeB );
 // ================================================================================================================ // 
 
 int main( int narg, char* argv[] ) {
-
-  auto start = high_resolution_clock::now();
   
   std::string inputFilesName = "";
   std::string inputNodesName = "";
@@ -160,24 +155,20 @@ int main( int narg, char* argv[] ) {
   // ================================================================================== //
 
   // Distributing...
-  std::unordered_map< std::string,std::string > distributionPlan;
+  std::unordered_map< std::size_t, std::size_t > distributionPlan;
   allocateNodes( distributionPlan,listOfFiles,listOfNodes );
 
   // ================================================================================== //
   
   // Writing the output
-  std::unordered_map< std::string,std::string >::const_iterator it = distributionPlan.begin();
-  for ( ; it != distributionPlan.end(); it++ ) {
-    std::string message = it->first + " " + it->second;
+  for (auto it=distributionPlan.begin(); it != distributionPlan.end(); it++ ) {
+    std::string message = listOfFiles[it->first].name() + " ";
+    message += it->second < listOfNodes.size() ? listOfNodes[it->second].name() : "NULL";
     if ( not outputName.empty() ) output << message.c_str() << "\n";
     else std::cout << message.c_str() << "\n";
   }
 
   output.close();  
-
-  auto stop = high_resolution_clock::now();
-  auto duration = duration_cast<seconds>(stop - start);
-  std::cout << duration.count() << std::endl;
 }
 
 // ================================================================================================================ // 
@@ -252,7 +243,7 @@ template< class T > bool processFile( const std::string& fileName,
   return true;
 }
 
-void allocateNodes( std::unordered_map< std::string,std::string  >& distributionPlan,
+void allocateNodes( std::unordered_map<std::size_t, std::size_t>& distributionPlan,
                     std::vector<File>& listOfFiles,
                     std::vector<Node>& listOfNodes ) {
 
@@ -264,17 +255,17 @@ void allocateNodes( std::unordered_map< std::string,std::string  >& distribution
 
 
   // Running on files
-  for ( int i(0); i<listOfFiles.size(); i++ ) {
+  for ( std::size_t i(0); i<listOfFiles.size(); i++ ) {
     const auto &file = listOfFiles.at(i);
-    distributionPlan[ file.name() ] = "NULL";
+    distributionPlan[ i ] = listOfNodes.size();
 
     // Running on Nodes to allocate the file
-    for ( int j(0); j<listOfNodes.size(); j++ ) {
+    for ( std::size_t j(0); j<listOfNodes.size(); j++ ) {
       auto& node = listOfNodes.at(j);
       if ( not node.canAccept( file ) ) continue;
 
       node.add( file );
-      distributionPlan[ file.name() ] = node.name(); 
+      distributionPlan[ i ] = j;
 
       // Place the modified Node into the (new) correct position
       for ( int m(j+1); m<listOfNodes.size(); m++ ) {
