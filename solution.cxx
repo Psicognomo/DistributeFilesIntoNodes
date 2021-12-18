@@ -1,84 +1,97 @@
 
-#include "iostream"
-#include "unistd.h"
-#include "memory"
-#include "fstream"
-#include "sstream"
-#include "vector"
-#include "map"
-#include "algorithm"
+#include <iostream>
+#include <unistd.h>
+#include <memory>
+#include <fstream>
+#include <sstream>
+#include <vector>
+#include <algorithm>
+#include <unordered_map>
+
+#include <chrono>
+using namespace std::chrono;
 
 // ================================================================================================================ //
 
 class File {
 public:
-  File( const std::string& name, int size ) :
-    m_name( name ), m_size( size ) {}
-  ~File() {}
+  File( std::string name, std::size_t size )
+    : m_name( std::move(name) ), m_size( size ) {}
+  ~File() = default;
 
-  const std::string name() const { return m_name; }
-  int size() const { return m_size; }
+  const std::string& name() const { return m_name; }
+  std::size_t size() const { return m_size; }
 
   void print( const std::string& indent = "" ) const {
     std::cout<<indent << "File '" << m_name <<"' (" << m_size <<  ")"<<std::endl;
   }
   
 private:
-  const std::string m_name;
-  const int m_size;
+  std::string m_name;
+  std::size_t m_size;
 };
 
 
 class Node {
 public:
-  Node( const std::string& name, int size ) :
-    m_name( name ), m_size( size ),
-    m_occupiedMemory( 0 ) {}
-  ~Node() {}
+  Node( std::string name, std::size_t size ) :
+    m_name( std::move(name) ), m_size( size ),
+    m_occupiedMemory( 0 ), m_nFiles(0) {}
+  Node(const Node& other) :
+    m_name(other.m_name), m_size(other.m_size),
+    m_occupiedMemory(other.m_occupiedMemory),
+    m_nFiles(other.m_nFiles) {}
+  Node& operator=(const Node& other) {
+    m_name = other.m_name;
+    m_size = other.m_size;
+    m_occupiedMemory = other.m_occupiedMemory;
+    m_nFiles = other.m_nFiles;
+    return *this;
+  }
+  ~Node() = default;
 
-  const std::string name() const { return m_name; }
-  int size() const { return m_size; }
+  const std::string& name() const { return m_name; }
+  std::size_t size() const { return m_size; }
 
-  int occupiedMemory() const { return m_occupiedMemory; }
-  int freeMemory() const { return m_size - m_occupiedMemory; }
-  int nFiles() const { return m_files.size(); }
+  std::size_t occupiedMemory() const { return m_occupiedMemory; }
+  std::size_t freeMemory() const { return m_size - m_occupiedMemory; }
+  std::size_t nFiles() const { return m_nFiles; }
   
-  bool canAccept( const File* file ) const { return file->size() <= this->freeMemory(); } 
-  bool add( const File* file ) {
-    if ( this->canAccept( file ) == false ) return false;
-    m_occupiedMemory += file->size();
-    m_files.push_back( file );
+  bool canAccept( const File& file ) const { return file.size() <= this->freeMemory(); } 
+  bool add( const File& file ) {
+    if ( not this->canAccept( file ) ) return false;
+    m_occupiedMemory += file.size();
+    m_nFiles += 1;
     return true;
   }
 
   void print( const std::string& indent = "") const {
     std::cout<<indent<< "Node '" << m_name << "' (" << this->freeMemory() << "/" << m_size <<  ") [used: " << this->occupiedMemory() << "]"<<std::endl;
-    std::cout<<indent<< "  Stored Files: " << m_files.size()<<std::endl;
-    for ( int i(0); i<m_files.size(); i++ ) 
-      m_files.at(i)->print( "    * " );
   }    
   
 private:
-  const std::string m_name;
-  const int m_size;
-  int m_occupiedMemory;
-  std::vector< const File* > m_files; 
+  std::string m_name;
+  std::size_t m_size;
+  std::size_t m_occupiedMemory;
+  std::size_t m_nFiles;
 };
 
 // ================================================================================================================ //
 
 int Usage();
-template< class T > bool processFile( const std::string&,std::vector< std::shared_ptr< T > >& );
-void allocateNodes( std::map< std::string,std::string  >&,
-		    std::vector< std::shared_ptr< File > >&,
-		    std::vector< std::shared_ptr< Node > >& );
-bool sortFilesBySize( std::shared_ptr< File >& FileA,std::shared_ptr< File >& FileB );
-bool sortNodesByMemory( std::shared_ptr< Node >& NodeA,std::shared_ptr< Node >& NodeB );
+template< class T > bool processFile( const std::string&,std::vector<T>& );
+void allocateNodes( std::unordered_map< std::string,std::string  >&,
+		    std::vector<File>&,
+		    std::vector<Node>& );
+bool sortFilesBySize( const File& FileA, const File& FileB );
+bool sortNodesByMemory( const Node& NodeA,const Node& NodeB );
 
 // ================================================================================================================ // 
 
 int main( int narg, char* argv[] ) {
 
+  auto start = high_resolution_clock::now();
+  
   std::string inputFilesName = "";
   std::string inputNodesName = "";
   std::string outputName = "";
@@ -122,10 +135,10 @@ int main( int narg, char* argv[] ) {
   }
 
   // ================================================================================== //
-  
-  std::vector< std::shared_ptr< File > > listOfFiles;
-  std::vector< std::shared_ptr< Node > >  listOfNodes;
 
+  std::vector< File > listOfFiles;
+  std::vector< Node > listOfNodes;
+  
   // Read Nodes
   if ( not processFile( inputNodesName,listOfNodes ) )
     return Usage();
@@ -147,13 +160,13 @@ int main( int narg, char* argv[] ) {
   // ================================================================================== //
 
   // Distributing...
-  std::map< std::string,std::string > distributionPlan;
+  std::unordered_map< std::string,std::string > distributionPlan;
   allocateNodes( distributionPlan,listOfFiles,listOfNodes );
 
   // ================================================================================== //
   
   // Writing the output
-  std::map< std::string,std::string >::const_iterator it = distributionPlan.begin();
+  std::unordered_map< std::string,std::string >::const_iterator it = distributionPlan.begin();
   for ( ; it != distributionPlan.end(); it++ ) {
     std::string message = it->first + " " + it->second;
     if ( not outputName.empty() ) output << message.c_str() << "\n";
@@ -161,6 +174,10 @@ int main( int narg, char* argv[] ) {
   }
 
   output.close();  
+
+  auto stop = high_resolution_clock::now();
+  auto duration = duration_cast<seconds>(stop - start);
+  std::cout << duration.count() << std::endl;
 }
 
 // ================================================================================================================ // 
@@ -180,7 +197,7 @@ int Usage() {
 }
 
 template< class T > bool processFile( const std::string& fileName,
-				      std::vector< std::shared_ptr< T > >& objectCollection ) {
+				      std::vector<T>& objectCollection ) {
 
   std::ifstream inputFiles;
   inputFiles.open( fileName.c_str() );
@@ -223,8 +240,7 @@ template< class T > bool processFile( const std::string& fileName,
 	return false;
       }
 
-      std::shared_ptr< T > toAdd( new T( name,sizeInt ) );
-      objectCollection.push_back( toAdd );
+      objectCollection.push_back( T(name, sizeInt) );
     }
   } catch ( ... ) {
     std::cout<<"ERROR: Issues while reading input file: '" << fileName << "'" << std::endl;
@@ -236,9 +252,9 @@ template< class T > bool processFile( const std::string& fileName,
   return true;
 }
 
-void allocateNodes( std::map< std::string,std::string  >& distributionPlan,
-                    std::vector< std::shared_ptr< File > >& listOfFiles,
-                    std::vector< std::shared_ptr< Node > >& listOfNodes ) {
+void allocateNodes( std::unordered_map< std::string,std::string  >& distributionPlan,
+                    std::vector<File>& listOfFiles,
+                    std::vector<Node>& listOfNodes ) {
 
   // Sort Files in decresing order (size). Big files first.
   std::sort( listOfFiles.begin(),listOfFiles.end(),sortFilesBySize );
@@ -249,24 +265,24 @@ void allocateNodes( std::map< std::string,std::string  >& distributionPlan,
 
   // Running on files
   for ( int i(0); i<listOfFiles.size(); i++ ) {
-    const File *file = listOfFiles.at(i).get();
-    distributionPlan[ file->name() ] = "NULL";
+    const auto &file = listOfFiles.at(i);
+    distributionPlan[ file.name() ] = "NULL";
 
     // Running on Nodes to allocate the file
     for ( int j(0); j<listOfNodes.size(); j++ ) {
-      Node *node = listOfNodes.at(j).get();
-      if ( node->canAccept( file ) == false ) continue;
+      auto& node = listOfNodes.at(j);
+      if ( not node.canAccept( file ) ) continue;
 
-      node->add( file );
-      distributionPlan[ file->name() ] = node->name(); 
+      node.add( file );
+      distributionPlan[ file.name() ] = node.name(); 
 
       // Place the modified Node into the (new) correct position
       for ( int m(j+1); m<listOfNodes.size(); m++ ) {
-	Node *other = listOfNodes.at(m).get();
+	auto &other = listOfNodes.at(m);
 
-	if ( node->occupiedMemory() < other->occupiedMemory() ) break;
-	if ( node->occupiedMemory() == other->occupiedMemory() &&
-	     node->freeMemory() <= other->freeMemory() ) break;
+	if ( node.occupiedMemory() < other.occupiedMemory() ) break;
+	if ( node.occupiedMemory() == other.occupiedMemory() &&
+	     node.freeMemory() <= other.freeMemory() ) break;
 	std::swap( listOfNodes.at( m-1 ),listOfNodes.at( m ) );
       }
 
@@ -276,15 +292,14 @@ void allocateNodes( std::map< std::string,std::string  >& distributionPlan,
 
 }
 
-bool sortFilesBySize( std::shared_ptr< File >& FileA,std::shared_ptr< File >& FileB ) {
-  if ( FileA->size() > FileB->size() ) return true;
-  return false;
+bool sortFilesBySize( const File& FileA, const File& FileB ) {
+  return FileA.size() > FileB.size();
 }
 
-bool sortNodesByMemory (std::shared_ptr< Node >& NodeA,std::shared_ptr< Node >& NodeB ) {
-  if ( NodeA->occupiedMemory() < NodeB->occupiedMemory() ) return true;
-  if ( NodeA->occupiedMemory() > NodeB->occupiedMemory() ) return false;
-  if ( NodeA->freeMemory() > NodeB->freeMemory() ) return true;
+bool sortNodesByMemory ( const Node& NodeA, const Node& NodeB ) {
+  if ( NodeA.occupiedMemory() < NodeB.occupiedMemory() ) return true;
+  if ( NodeA.occupiedMemory() > NodeB.occupiedMemory() ) return false;
+  if ( NodeA.freeMemory() > NodeB.freeMemory() ) return true;
   return false;
 }
 
