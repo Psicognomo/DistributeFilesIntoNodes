@@ -161,9 +161,9 @@ int main( int narg, char* argv[] ) {
   // ================================================================================== //
   
   // Writing the output
-  for (auto it=distributionPlan.begin(); it != distributionPlan.end(); it++ ) {
-    std::string message = listOfFiles[it->first].name() + " ";
-    message += it->second < listOfNodes.size() ? listOfNodes[it->second].name() : "NULL";
+  for (const auto& [index_f, index_n] : distributionPlan ) {
+    std::string message = listOfFiles[index_f].name() + " ";
+    message += index_n < listOfNodes.size() ? listOfNodes[index_n].name() : "NULL";
     if ( not outputName.empty() ) output << message.c_str() << "\n";
     else std::cout << message.c_str() << "\n";
   }
