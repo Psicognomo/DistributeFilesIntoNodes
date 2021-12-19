@@ -8,9 +8,6 @@
 #include <algorithm>
 #include <unordered_map>
 
-#include <chrono>
-using namespace std::chrono;
-
 // ================================================================================================================ //
 
 class File {
@@ -75,7 +72,6 @@ void allocateNodes( std::unordered_map< std::string, std::string  >&,
 // ================================================================================================================ // 
 
 int main( int narg, char* argv[] ) {
-  auto start = high_resolution_clock::now();
   
   std::string inputFilesName = "";
   std::string inputNodesName = "";
@@ -159,10 +155,6 @@ int main( int narg, char* argv[] ) {
   }
   
   output.close();
-
-  auto stop = high_resolution_clock::now();
-  auto duration = duration_cast<seconds>(stop - start);
-  std::cout << duration.count() << " seconds" << std::endl;
 }
 
 // ================================================================================================================ // 
