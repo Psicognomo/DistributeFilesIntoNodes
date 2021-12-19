@@ -7,6 +7,10 @@
 #include <vector>
 #include <algorithm>
 #include <unordered_map>
+#include <cmath>
+
+#include <chrono>
+using namespace std::chrono;
 
 // ================================================================================================================ //
 
@@ -68,10 +72,16 @@ template< class T > bool processFile( const std::string&,std::vector<T>& );
 void allocateNodes( std::unordered_map< std::string, std::string  >&,
 		    std::vector<File>&,
 		    std::vector<Node>& );
+template<typename comparator_t>
+std::size_t findNewPositionInRange(std::size_t, std::size_t,
+				   const std::vector<std::size_t>&,
+				   const comparator_t& Comparator);
+void swap(std::vector<std::size_t>&, std::size_t, std::size_t);
 
 // ================================================================================================================ // 
 
 int main( int narg, char* argv[] ) {
+  auto start = high_resolution_clock::now();
   
   std::string inputFilesName = "";
   std::string inputNodesName = "";
@@ -155,6 +165,10 @@ int main( int narg, char* argv[] ) {
   }
   
   output.close();
+
+  auto stop = high_resolution_clock::now();
+  auto duration = duration_cast<seconds>(stop - start);
+  std::cout << duration.count() << " seconds" << std::endl;
 }
 
 // ================================================================================================================ // 
@@ -270,7 +284,7 @@ void allocateNodes( std::unordered_map<std::string, std::string>& distributionPl
   // In case of two nodes with same occupied memory, the node with big free memory goes first.
   std::sort( indexes_nodes.begin(), indexes_nodes.end(),
 	     compareNodes );
-  
+
   // Running on files
   for ( std::size_t idx_f : indexes_files ) {
     const auto &file = listOfFiles.at(idx_f);
@@ -284,21 +298,51 @@ void allocateNodes( std::unordered_map<std::string, std::string>& distributionPl
       if ( not node.canAccept( file ) ) continue;
       node.add( file );
       distributionPlan[ file.name() ] = node.name();
-      
+
       // Place the modified Node into the (new) correct position
-      std::size_t target_pos = j;
-      std::size_t current_value = indexes_nodes.at(j);
-
-      for (std::size_t m(j+1); m<indexes_nodes.size(); m++, target_pos++) {
-    	if ( compareNodes( current_value, indexes_nodes.at(m) ) ) break;
-	indexes_nodes.at(target_pos) = indexes_nodes.at(m);
-      }
-
-      if (target_pos != j)
-	indexes_nodes.at(target_pos) = current_value;
-          
+      std::size_t new_pos = findNewPositionInRange(j, indexes_nodes.size(),
+						   indexes_nodes,
+						   compareNodes);
+      
+      swap(indexes_nodes, j, new_pos);      
       break;
     }
   }
 }
 
+template<typename comparator_t>
+std::size_t findNewPositionInRange(std::size_t dw, std::size_t up,
+                                   const std::vector<std::size_t>& collection,
+                                   const comparator_t& Comparator)
+{
+  std::size_t output = dw;
+  std::size_t current_value = collection.at(dw);
+
+  bool found = false;
+  while (not found) {
+    std::size_t mp = std::floor( (output + up)/2 );
+
+    if ( Comparator(current_value, collection.at(mp)) ) {
+      up = mp; 
+    } else {
+      output = mp;
+    }
+
+    if (output == up or
+	up - output == 1)
+      found = true;
+  }
+
+  return output;
+}
+
+void swap(std::vector<std::size_t>& collection,
+	  std::size_t current, std::size_t target)
+{
+  if (current == target) return;
+
+  std::size_t storage = collection.at(current);
+  for (std::size_t m(current); m<target; m++)
+    collection.at(m) = collection.at(m+1);
+  collection.at(target) = storage;
+}
