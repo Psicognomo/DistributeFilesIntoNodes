@@ -8,6 +8,9 @@
 #include <algorithm>
 #include <unordered_map>
 
+#include <chrono>
+using namespace std::chrono;
+
 // ================================================================================================================ //
 
 class File {
@@ -72,6 +75,7 @@ void allocateNodes( std::unordered_map< std::string, std::string  >&,
 // ================================================================================================================ // 
 
 int main( int narg, char* argv[] ) {
+  auto start = high_resolution_clock::now();
   
   std::string inputFilesName = "";
   std::string inputNodesName = "";
@@ -155,6 +159,10 @@ int main( int narg, char* argv[] ) {
   }
   
   output.close();
+
+  auto stop = high_resolution_clock::now();
+  auto duration = duration_cast<seconds>(stop - start);
+  std::cout << duration.count() << " seconds" << std::endl;
 }
 
 // ================================================================================================================ // 
@@ -279,29 +287,26 @@ void allocateNodes( std::unordered_map<std::string, std::string>& distributionPl
     // Running on Nodes to allocate the file
     for ( std::size_t j(0); j<indexes_nodes.size(); j++ ) {
       std::size_t idex_n_current = indexes_nodes.at(j);
+      auto& node = listOfNodes.at(idex_n_current);
 
-      if ( not listOfNodes.at(idex_n_current).canAccept( file ) ) continue;
-      
-      listOfNodes.at(idex_n_current).add( file );
-      distributionPlan[ file.name() ] = listOfNodes.at(idex_n_current).name();
+      if ( not node.canAccept( file ) ) continue;
+      node.add( file );
+      distributionPlan[ file.name() ] = node.name();
       
       // Place the modified Node into the (new) correct position
-      std::size_t current_pos = j;
       std::size_t target_pos = j;
-      
+      std::size_t current_value = indexes_nodes.at(j);
+
       for (std::size_t m(j+1); m<indexes_nodes.size(); m++, target_pos++) {
-    	if ( compareNodes( indexes_nodes.at(current_pos), indexes_nodes.at(m) ) )
-    	  break;
+    	if ( compareNodes( current_value, indexes_nodes.at(m) ) ) break;
+	indexes_nodes.at(target_pos) = indexes_nodes.at(m);
       }
-      
-      std::size_t current_value = indexes_nodes.at(current_pos);
-      for ( ; current_pos < target_pos; current_pos++) 
-    	indexes_nodes.at(current_pos) = indexes_nodes.at(current_pos + 1);
-      indexes_nodes.at(target_pos) = current_value;
+
+      if (target_pos != j)
+	indexes_nodes.at(target_pos) = current_value;
           
       break;
     }
   }
 }
-
 
