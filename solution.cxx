@@ -33,16 +33,14 @@ class Node {
 public:
   Node( std::string name, std::size_t size ) :
     m_name( std::move(name) ), m_size( size ),
-    m_occupiedMemory( 0 ), m_nFiles(0) {}
+    m_occupiedMemory( 0 ) {}
   Node(const Node& other) :
     m_name(other.m_name), m_size(other.m_size),
-    m_occupiedMemory(other.m_occupiedMemory),
-    m_nFiles(other.m_nFiles) {}
+    m_occupiedMemory(other.m_occupiedMemory) {}
   Node& operator=(const Node& other) {
     m_name = other.m_name;
     m_size = other.m_size;
     m_occupiedMemory = other.m_occupiedMemory;
-    m_nFiles = other.m_nFiles;
     return *this;
   }
   ~Node() = default;
@@ -52,13 +50,11 @@ public:
 
   std::size_t occupiedMemory() const { return m_occupiedMemory; }
   std::size_t freeMemory() const { return m_size - m_occupiedMemory; }
-  std::size_t nFiles() const { return m_nFiles; }
   
   bool canAccept( const File& file ) const { return file.size() <= this->freeMemory(); } 
   bool add( const File& file ) {
     if ( not this->canAccept( file ) ) return false;
     m_occupiedMemory += file.size();
-    m_nFiles += 1;
     return true;
   }
 
@@ -70,7 +66,6 @@ private:
   std::string m_name;
   std::size_t m_size;
   std::size_t m_occupiedMemory;
-  std::size_t m_nFiles;
 };
 
 // ================================================================================================================ //
