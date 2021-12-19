@@ -149,12 +149,7 @@ int main( int narg, char* argv[] ) {
   allocateNodes( distributionPlan, listOfFiles, listOfNodes );
   
   // ================================================================================== //
-  
-  for (const auto& f : listOfFiles)
-    f.print();
-  for (const auto& n : listOfNodes)
-    n.print();
-  
+    
   // Writing the output
   for( const auto& [idx_file, idx_node] : distributionPlan) {
     std::string message = listOfFiles[idx_file].name() + " ";
