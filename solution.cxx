@@ -155,6 +155,15 @@ int main( int narg, char* argv[] ) {
   std::unordered_map< std::size_t, std::size_t > distributionPlan;
   allocateNodes( distributionPlan,listOfFiles,listOfNodes );
 
+  std::cout<<"Files:"<<std::endl;
+  for (const auto& file : listOfFiles)
+    file.print("   * ");
+  std::cout<<"Nodes:"<<std::endl;
+  for (const auto& node : listOfNodes)
+    node.print("   * ");
+      
+  return 1;
+
   // ================================================================================== //
   
   // Writing the output
@@ -250,15 +259,6 @@ void allocateNodes( std::unordered_map<std::size_t, std::size_t>& distributionPl
   // In case of two nodes with same occupied memory, the node with big free memory goes first.
   std::sort( listOfNodes.begin(),listOfNodes.end(),sortNodesByMemory );
 
-  std::cout<<"Files:"<<std::endl;
-  for (const auto& file : listOfFiles)
-    file.print("   * ");
-  std::cout<<"Nodes:"<<std::endl;
-  for (const auto& node : listOfNodes)
-    node.print("   * ");
-      
-  return;
-
   // Running on files
   for ( std::size_t i(0); i<listOfFiles.size(); i++ ) {
     const auto &file = listOfFiles.at(i);
@@ -266,7 +266,7 @@ void allocateNodes( std::unordered_map<std::size_t, std::size_t>& distributionPl
 
     // Running on Nodes to allocate the file
     for ( std::size_t j(0); j<listOfNodes.size(); j++ ) {
-      auto& node = listOfNodes.at(j);
+      auto &node = listOfNodes.at(j);
       if ( not node.canAccept( file ) ) continue;
 
       node.add( file );
@@ -274,11 +274,12 @@ void allocateNodes( std::unordered_map<std::size_t, std::size_t>& distributionPl
 
       // Place the modified Node into the (new) correct position
       for ( int m(j+1); m<listOfNodes.size(); m++ ) {
-	auto &other = listOfNodes.at(m);
+	auto& current = listOfNodes.at(m-1);
+	auto& other = listOfNodes.at(m);
 
-	if ( node.occupiedMemory() < other.occupiedMemory() ) break;
-	if ( node.occupiedMemory() == other.occupiedMemory() &&
-	     node.freeMemory() <= other.freeMemory() ) break;
+	if ( current.occupiedMemory() < other.occupiedMemory() ) break;
+	if ( current.occupiedMemory() == other.occupiedMemory() &&
+	     current.freeMemory() <= other.freeMemory() ) break;
 	std::swap( listOfNodes.at( m-1 ),listOfNodes.at( m ) );
       }
 
