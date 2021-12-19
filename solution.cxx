@@ -71,14 +71,11 @@ template< class T > bool processFile( const std::string&,std::vector<T>& );
 void allocateNodes( std::unordered_map< std::size_t, std::size_t  >&,
 		    std::vector<File>&,
 		    std::vector<Node>& );
-bool sortFilesBySize( const File& FileA, const File& FileB );
-bool sortNodesByMemory( const Node& NodeA,const Node& NodeB );
 
 // ================================================================================================================ // 
 
 int main( int narg, char* argv[] ) {
-
-
+  auto start = high_resolution_clock::now();
   
   std::string inputFilesName = "";
   std::string inputNodesName = "";
@@ -126,15 +123,15 @@ int main( int narg, char* argv[] ) {
 
   std::vector< File > listOfFiles;
   std::vector< Node > listOfNodes;
-  
+    
   // Read Nodes
   if ( not processFile( inputNodesName,listOfNodes ) )
     return Usage();
-
+  
   // Read Files 
   if ( not processFile( inputFilesName,listOfFiles ) )
     return Usage();
-
+  
   // Create output
   std::ofstream output;
   if ( not outputName.empty() ) {
@@ -146,28 +143,32 @@ int main( int narg, char* argv[] ) {
   }
   
   // ================================================================================== //
-  auto start = high_resolution_clock::now();
   
   // Distributing...
   std::unordered_map< std::size_t, std::size_t > distributionPlan;
-  allocateNodes( distributionPlan,listOfFiles,listOfNodes );
-
+  allocateNodes( distributionPlan, listOfFiles, listOfNodes );
+  
   // ================================================================================== //
-
-  auto stop = high_resolution_clock::now();
-  auto duration = duration_cast<seconds>(stop - start);
-  std::cout << duration.count() << " seconds" << std::endl;
-
+  
+  for (const auto& f : listOfFiles)
+    f.print();
+  for (const auto& n : listOfNodes)
+    n.print();
+  
   // Writing the output
-  for (const auto& [index_f, index_n] : distributionPlan ) {
-    std::string message = listOfFiles[index_f].name() + " ";
-    message += index_n < listOfNodes.size() ? listOfNodes[index_n].name() : "NULL";
+  for( const auto& [idx_file, idx_node] : distributionPlan) {
+    std::string message = listOfFiles[idx_file].name() + " ";
+    message += idx_node < listOfNodes.size() ? listOfNodes.at(idx_node).name() : "NULL";
+    
     if ( not outputName.empty() ) output << message.c_str() << "\n";
     else std::cout << message.c_str() << "\n";
   }
-
-  output.close();  
-
+  
+  output.close();
+  
+  auto stop = high_resolution_clock::now();
+  auto duration = duration_cast<seconds>(stop - start);
+  std::cout << "Single replaement: " << duration.count() << " seconds" << std::endl; 
 }
 
 // ================================================================================================================ // 
@@ -246,49 +247,75 @@ void allocateNodes( std::unordered_map<std::size_t, std::size_t>& distributionPl
                     std::vector<File>& listOfFiles,
                     std::vector<Node>& listOfNodes ) {
 
+  distributionPlan.reserve(listOfFiles.size());
+  
+  std::vector<std::size_t> indexes_files;
+  std::vector<std::size_t> indexes_nodes;
+
+  indexes_files.reserve(listOfFiles.size());
+  indexes_nodes.reserve(listOfNodes.size());
+  
+  for (std::size_t i(0); i < listOfFiles.size(); i++)
+    indexes_files.push_back(i);
+  for (std::size_t i(0); i < listOfNodes.size(); i++)
+    indexes_nodes.push_back(i);
+
+  // Compare functions
+  auto compareFiles = [&listOfFiles] (std::size_t elA, std::size_t elB) -> bool
+		      {
+			return listOfFiles.at(elA).size() > listOfFiles.at(elB).size();
+		      };
+  
+  auto compareNodes = [&listOfNodes] (std::size_t elA, std::size_t elB) -> bool
+		      {
+			const auto& NodeA = listOfNodes.at(elA);
+			const auto& NodeB = listOfNodes.at(elB);
+			if ( NodeA.occupiedMemory() < NodeB.occupiedMemory() ) return true;
+			if ( NodeA.occupiedMemory() > NodeB.occupiedMemory() ) return false;
+			if ( NodeA.freeMemory() > NodeB.freeMemory() ) return true;
+			return false;
+		      };
+  
   // Sort Files in decresing order (size). Big files first.
-  std::sort( listOfFiles.begin(),listOfFiles.end(),sortFilesBySize );
+  std::sort( indexes_files.begin(), indexes_files.end(),
+	     compareFiles );
+  
   // Sort Nodes according to node memory. Nodes with big occupied memory last.
   // In case of two nodes with same occupied memory, the node with big free memory goes first.
-  std::sort( listOfNodes.begin(),listOfNodes.end(),sortNodesByMemory );
-
+  std::sort( indexes_nodes.begin(), indexes_nodes.end(),
+	     compareNodes );
+  
   // Running on files
-  for ( std::size_t i(0); i<listOfFiles.size(); i++ ) {
-    const auto &file = listOfFiles.at(i);
-    distributionPlan[ i ] = listOfNodes.size();
+  for ( std::size_t idx_f : indexes_files ) {
+    const auto &file = listOfFiles.at(idx_f);
+    distributionPlan[ idx_f ] = listOfNodes.size();
 
     // Running on Nodes to allocate the file
-    for ( std::size_t j(0); j<listOfNodes.size(); j++ ) {
-      if ( not listOfNodes.at(j).canAccept( file ) ) continue;
+    for ( std::size_t j(0); j<indexes_nodes.size(); j++ ) {
+      std::size_t idex_n_current = indexes_nodes.at(j);
 
-      listOfNodes.at(j).add( file );
-      distributionPlan[ i ] = j;
-
+      if ( not listOfNodes.at(idex_n_current).canAccept( file ) ) continue;
+      
+      listOfNodes.at(idex_n_current).add( file );
+      distributionPlan[ idx_f ] = idex_n_current;
+      
       // Place the modified Node into the (new) correct position
-      for ( int m(j+1); m<listOfNodes.size(); m++ ) {
-	const auto& node = listOfNodes.at(m-1);
-	const auto& other = listOfNodes.at(m);
-
-	if ( node.occupiedMemory() < other.occupiedMemory() ) break;
-	if ( node.occupiedMemory() == other.occupiedMemory() &&
-	     node.freeMemory() <= other.freeMemory() ) break;
-	std::swap( listOfNodes.at( m-1 ),listOfNodes.at( m ) );
+      std::size_t current_pos = j;
+      std::size_t target_pos = j;
+      
+      for (std::size_t m(j+1); m<indexes_nodes.size(); m++, target_pos++) {
+    	if ( compareNodes( indexes_nodes.at(current_pos), indexes_nodes.at(m) ) )
+    	  break;
       }
-
+      
+      std::size_t current_value = indexes_nodes.at(current_pos);
+      for ( ; current_pos < target_pos; current_pos++) 
+    	indexes_nodes.at(current_pos) = indexes_nodes.at(current_pos + 1);
+      indexes_nodes.at(target_pos) = current_value;
+          
       break;
     }
   }
-
 }
 
-bool sortFilesBySize( const File& FileA, const File& FileB ) {
-  return FileA.size() > FileB.size();
-}
-
-bool sortNodesByMemory ( const Node& NodeA, const Node& NodeB ) {
-  if ( NodeA.occupiedMemory() < NodeB.occupiedMemory() ) return true;
-  if ( NodeA.occupiedMemory() > NodeB.occupiedMemory() ) return false;
-  if ( NodeA.freeMemory() > NodeB.freeMemory() ) return true;
-  return false;
-}
 
