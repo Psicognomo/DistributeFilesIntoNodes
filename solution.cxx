@@ -12,6 +12,7 @@
 
 class File {
 public:
+  File() = delete;
   File( std::string name, std::size_t size )
     : m_name( std::move(name) ), m_size( size ) {}
   ~File() = default;
@@ -31,6 +32,7 @@ private:
 
 class Node {
 public:
+  Node() = delete;
   Node( std::string name, std::size_t size ) :
     m_name( std::move(name) ), m_size( size ),
     m_occupiedMemory( 0 ) {}
