@@ -8,6 +8,9 @@
 #include <algorithm>
 #include <unordered_map>
 
+#include <chrono>
+using namespace std::chrono;
+
 // ================================================================================================================ //
 
 class File {
@@ -33,18 +36,9 @@ private:
 class Node {
 public:
   Node() = delete;
-  Node( std::string name, std::size_t size ) :
+  Node(std::string name, std::size_t size) :
     m_name( std::move(name) ), m_size( size ),
     m_occupiedMemory( 0 ) {}
-  Node(const Node& other) :
-    m_name(other.m_name), m_size(other.m_size),
-    m_occupiedMemory(other.m_occupiedMemory) {}
-  Node& operator=(const Node& other) {
-    m_name = other.m_name;
-    m_size = other.m_size;
-    m_occupiedMemory = other.m_occupiedMemory;
-    return *this;
-  }
   ~Node() = default;
 
   const std::string& name() const { return m_name; }
@@ -83,6 +77,8 @@ bool sortNodesByMemory( const Node& NodeA,const Node& NodeB );
 // ================================================================================================================ // 
 
 int main( int narg, char* argv[] ) {
+
+
   
   std::string inputFilesName = "";
   std::string inputNodesName = "";
@@ -150,22 +146,18 @@ int main( int narg, char* argv[] ) {
   }
   
   // ================================================================================== //
-
+  auto start = high_resolution_clock::now();
+  
   // Distributing...
   std::unordered_map< std::size_t, std::size_t > distributionPlan;
   allocateNodes( distributionPlan,listOfFiles,listOfNodes );
 
-  std::cout<<"Files:"<<std::endl;
-  for (const auto& file : listOfFiles)
-    file.print("   * ");
-  std::cout<<"Nodes:"<<std::endl;
-  for (const auto& node : listOfNodes)
-    node.print("   * ");
-      
-  return 1;
-
   // ================================================================================== //
-  
+
+  auto stop = high_resolution_clock::now();
+  auto duration = duration_cast<seconds>(stop - start);
+  std::cout << duration.count() << " seconds" << std::endl;
+
   // Writing the output
   for (const auto& [index_f, index_n] : distributionPlan ) {
     std::string message = listOfFiles[index_f].name() + " ";
@@ -175,6 +167,7 @@ int main( int narg, char* argv[] ) {
   }
 
   output.close();  
+
 }
 
 // ================================================================================================================ // 
@@ -266,20 +259,19 @@ void allocateNodes( std::unordered_map<std::size_t, std::size_t>& distributionPl
 
     // Running on Nodes to allocate the file
     for ( std::size_t j(0); j<listOfNodes.size(); j++ ) {
-      auto &node = listOfNodes.at(j);
-      if ( not node.canAccept( file ) ) continue;
+      if ( not listOfNodes.at(j).canAccept( file ) ) continue;
 
-      node.add( file );
+      listOfNodes.at(j).add( file );
       distributionPlan[ i ] = j;
 
       // Place the modified Node into the (new) correct position
       for ( int m(j+1); m<listOfNodes.size(); m++ ) {
-	auto& current = listOfNodes.at(m-1);
-	auto& other = listOfNodes.at(m);
+	const auto& node = listOfNodes.at(m-1);
+	const auto& other = listOfNodes.at(m);
 
-	if ( current.occupiedMemory() < other.occupiedMemory() ) break;
-	if ( current.occupiedMemory() == other.occupiedMemory() &&
-	     current.freeMemory() <= other.freeMemory() ) break;
+	if ( node.occupiedMemory() < other.occupiedMemory() ) break;
+	if ( node.occupiedMemory() == other.occupiedMemory() &&
+	     node.freeMemory() <= other.freeMemory() ) break;
 	std::swap( listOfNodes.at( m-1 ),listOfNodes.at( m ) );
       }
 
