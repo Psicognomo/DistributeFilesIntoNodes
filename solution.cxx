@@ -250,6 +250,14 @@ void allocateNodes( std::unordered_map<std::size_t, std::size_t>& distributionPl
   // In case of two nodes with same occupied memory, the node with big free memory goes first.
   std::sort( listOfNodes.begin(),listOfNodes.end(),sortNodesByMemory );
 
+  std::cout<<"Files:"<<std::endl;
+  for (const auto& file : listOfFiles)
+    file.print("   * ");
+  std::cout<<"Nodes:"<<std::endl;
+  for (const auto& node : listOfNodes)
+    node.print("   * ");
+      
+  return;
 
   // Running on files
   for ( std::size_t i(0); i<listOfFiles.size(); i++ ) {
