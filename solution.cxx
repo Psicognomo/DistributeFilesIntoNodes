@@ -299,7 +299,6 @@ void allocateNodes( std::vector<std::size_t>& distributionPlan,
   // Running on files
   for ( std::size_t idx_f : indexes_files ) {
     const auto &file = listOfFiles.at(idx_f);
-//    distributionPlan[ file.name() ] = "NULL";
 
     // Running on Nodes to allocate the file
     for ( std::size_t j(0); j<indexes_nodes.size(); j++ ) {
@@ -308,7 +307,7 @@ void allocateNodes( std::vector<std::size_t>& distributionPlan,
 
       if ( not node.canAccept( file ) ) continue;
       node.add( file );
-      distributionPlan[ idx_f ] = j;
+      distributionPlan[ idx_f ] = idex_n_current;
 
       // Place the modified Node into the (new) correct position
       std::size_t new_pos = findNewPositionInRange(j, indexes_nodes.size(),
