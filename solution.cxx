@@ -1,4 +1,3 @@
-
 #include <iostream>
 #include <unistd.h>
 #include <memory>
@@ -8,6 +7,9 @@
 #include <algorithm>
 #include <unordered_map>
 #include <cmath>
+
+#include <chrono>
+using namespace std::chrono;
 
 // ================================================================================================================ //
 
@@ -45,7 +47,7 @@ public:
   std::size_t occupiedMemory() const { return m_occupiedMemory; }
   std::size_t freeMemory() const { return m_size - m_occupiedMemory; }
   
-  bool canAccept( const File& file ) const { return file.size() <= this->freeMemory(); } 
+  bool canAccept( const File& file ) const { return file.size() <= this->freeMemory(); }
   bool add( const File& file ) {
     if ( not this->canAccept( file ) ) return false;
     m_occupiedMemory += file.size();
@@ -54,7 +56,7 @@ public:
 
   void print( const std::string& indent = "") const {
     std::cout<<indent<< "Node '" << m_name << "' (" << this->freeMemory() << "/" << m_size <<  ") [used: " << this->occupiedMemory() << "]"<<std::endl;
-  }    
+  }
   
 private:
   std::string m_name;
@@ -66,24 +68,28 @@ private:
 
 int Usage();
 template< class T > bool processFile( const std::string&,std::vector<T>& );
-void allocateNodes( std::unordered_map< std::string, std::string  >&,
-		    std::vector<File>&,
-		    std::vector<Node>& );
+//void allocateNodes( std::unordered_map< std::string, std::string  >&,
+void allocateNodes(std::vector<std::size_t>&,
+                   std::vector<File>&,
+                   std::vector<Node>& );
 template<typename comparator_t>
 std::size_t findNewPositionInRange(std::size_t, std::size_t,
-				   const std::vector<std::size_t>&,
-				   const comparator_t& Comparator);
+                   const std::vector<std::size_t>&,
+                   const comparator_t& Comparator);
 void swap(std::vector<std::size_t>&, std::size_t, std::size_t);
 
-// ================================================================================================================ // 
+// ================================================================================================================ //
 
 int main( int narg, char* argv[] ) {
-  
+  std::cout << "Running code ... " << std::endl;
+
+  auto start = high_resolution_clock::now();
+
   std::string inputFilesName = "";
   std::string inputNodesName = "";
   std::string outputName = "";
 
-  // ================================================================================== // 
+  // ================================================================================== //
   
   int c;
   while ( (c = getopt (narg, argv, "f:n:o:h") ) != -1) {
@@ -101,9 +107,9 @@ int main( int narg, char* argv[] ) {
       break;
     case '?':
       if (isprint (optopt))
-	fprintf (stderr, "Unknown option `-%c'.\n", optopt);
+    fprintf (stderr, "Unknown option `-%c'.\n", optopt);
       else
-	fprintf (stderr,"Unknown option character `\\x%x'.\n",optopt);
+    fprintf (stderr,"Unknown option character `\\x%x'.\n",optopt);
       return Usage();
     default:
       return Usage();
@@ -113,7 +119,7 @@ int main( int narg, char* argv[] ) {
   
   if ( inputFilesName.empty() ) {
     std::cout<<"### Input missing: file with file names not specified!"<<std::endl;
-    return Usage(); 
+    return Usage();
   }
   
   if ( inputNodesName.empty() ) {
@@ -130,7 +136,7 @@ int main( int narg, char* argv[] ) {
   if ( not processFile( inputNodesName,listOfNodes ) )
     return Usage();
   
-  // Read Files 
+  // Read Files
   if ( not processFile( inputFilesName,listOfFiles ) )
     return Usage();
   
@@ -147,23 +153,36 @@ int main( int narg, char* argv[] ) {
   // ================================================================================== //
   
   // Distributing...
-  std::unordered_map< std::string, std::string > distributionPlan;
+//  std::unordered_map< std::string, std::string > distributionPlan;
+  std::vector<std::size_t> distributionPlan;
+  distributionPlan.resize(listOfFiles.size(), listOfFiles.size());
   allocateNodes( distributionPlan, listOfFiles, listOfNodes );
   
   // ================================================================================== //
     
   // Writing the output
-  for( const auto& [file, node] : distributionPlan) {
-    std::string message = file + " " + node;
+  for (std::size_t n_file(0); n_file < distributionPlan.size(); n_file++) {
+    std::size_t n_node = distributionPlan.at(n_file);
+    const auto& file = listOfFiles.at(n_file);
+
+    std::string message = file.name() + " ";
+    if (n_node == listOfFiles.size())
+      message += "NULL";
+    else
+      message += listOfNodes.at(n_node).name();
     
     if ( not outputName.empty() ) output << message.c_str() << "\n";
     else std::cout << message.c_str() << "\n";
   }
   
   output.close();
+
+  auto stop = high_resolution_clock::now();
+  auto duration = duration_cast<milliseconds>(stop - start);
+  std::cout << duration.count() << " milli-seconds" << std::endl;
 }
 
-// ================================================================================================================ // 
+// ================================================================================================================ //
 
 int Usage() {
 
@@ -180,7 +199,7 @@ int Usage() {
 }
 
 template< class T > bool processFile( const std::string& fileName,
-				      std::vector<T>& objectCollection ) {
+                      std::vector<T>& objectCollection ) {
 
   std::ifstream inputFiles;
   inputFiles.open( fileName.c_str() );
@@ -208,19 +227,19 @@ template< class T > bool processFile( const std::string& fileName,
       // Check if there are additional elements
       // This should not happen
       if ( not otherArgument.empty() ) {
-	std::cout<<"ERROR: Too many arguments in the line: something is wrong in the input file '" << fileName << "'" << std::endl;
-	std::cout<<"ERROR: Faulty line: " << iss.str() << std::endl;
-	inputFiles.close();
+    std::cout<<"ERROR: Too many arguments in the line: something is wrong in the input file '" << fileName << "'" << std::endl;
+    std::cout<<"ERROR: Faulty line: " << iss.str() << std::endl;
+    inputFiles.close();
         return false;
-      } 
+      }
 
       // Check the size is a positive integer
       int sizeInt = std::stoi(size);
       if ( sizeInt < 0 ) {
-	std::cout<<"ERROR: Size is negative: something is wrong in the input file '" << fileName << "'" << std::endl;
-	std::cout<<"ERROR: Faulty line: " << iss.str() << std::endl;
-	inputFiles.close();
-	return false;
+    std::cout<<"ERROR: Size is negative: something is wrong in the input file '" << fileName << "'" << std::endl;
+    std::cout<<"ERROR: Faulty line: " << iss.str() << std::endl;
+    inputFiles.close();
+    return false;
       }
 
       objectCollection.push_back( T(name, sizeInt) );
@@ -235,11 +254,11 @@ template< class T > bool processFile( const std::string& fileName,
   return true;
 }
 
-void allocateNodes( std::unordered_map<std::string, std::string>& distributionPlan,
+//void allocateNodes( std::unordered_map<std::string, std::string>& distributionPlan,
+void allocateNodes( std::vector<std::size_t>& distributionPlan,
                     std::vector<File>& listOfFiles,
                     std::vector<Node>& listOfNodes ) {
 
-  distributionPlan.reserve(listOfFiles.size());
   
   std::vector<std::size_t> indexes_files;
   std::vector<std::size_t> indexes_nodes;
@@ -254,33 +273,33 @@ void allocateNodes( std::unordered_map<std::string, std::string>& distributionPl
 
   // Compare functions
   auto compareFiles = [&listOfFiles] (std::size_t elA, std::size_t elB) -> bool
-		      {
-			return listOfFiles.at(elA).size() > listOfFiles.at(elB).size();
-		      };
+              {
+            return listOfFiles.at(elA).size() > listOfFiles.at(elB).size();
+              };
   
   auto compareNodes = [&listOfNodes] (std::size_t elA, std::size_t elB) -> bool
-		      {
-			const auto& NodeA = listOfNodes.at(elA);
-			const auto& NodeB = listOfNodes.at(elB);
-			if ( NodeA.occupiedMemory() < NodeB.occupiedMemory() ) return true;
-			if ( NodeA.occupiedMemory() > NodeB.occupiedMemory() ) return false;
-			if ( NodeA.freeMemory() > NodeB.freeMemory() ) return true;
-			return false;
-		      };
+              {
+            const auto& NodeA = listOfNodes.at(elA);
+            const auto& NodeB = listOfNodes.at(elB);
+            if ( NodeA.occupiedMemory() < NodeB.occupiedMemory() ) return true;
+            if ( NodeA.occupiedMemory() > NodeB.occupiedMemory() ) return false;
+            if ( NodeA.freeMemory() > NodeB.freeMemory() ) return true;
+            return false;
+              };
   
   // Sort Files in decresing order (size). Big files first.
   std::sort( indexes_files.begin(), indexes_files.end(),
-	     compareFiles );
+         compareFiles );
   
   // Sort Nodes according to node memory. Nodes with big occupied memory last.
   // In case of two nodes with same occupied memory, the node with big free memory goes first.
   std::sort( indexes_nodes.begin(), indexes_nodes.end(),
-	     compareNodes );
+         compareNodes );
 
   // Running on files
   for ( std::size_t idx_f : indexes_files ) {
     const auto &file = listOfFiles.at(idx_f);
-    distributionPlan[ file.name() ] = "NULL";
+//    distributionPlan[ file.name() ] = "NULL";
 
     // Running on Nodes to allocate the file
     for ( std::size_t j(0); j<indexes_nodes.size(); j++ ) {
@@ -289,14 +308,14 @@ void allocateNodes( std::unordered_map<std::string, std::string>& distributionPl
 
       if ( not node.canAccept( file ) ) continue;
       node.add( file );
-      distributionPlan[ file.name() ] = node.name();
+      distributionPlan[ idx_f ] = j;
 
       // Place the modified Node into the (new) correct position
       std::size_t new_pos = findNewPositionInRange(j, indexes_nodes.size(),
-						   indexes_nodes,
-						   compareNodes);
+                           indexes_nodes,
+                           compareNodes);
       
-      swap(indexes_nodes, j, new_pos);      
+      swap(indexes_nodes, j, new_pos);
       break;
     }
   }
@@ -315,13 +334,13 @@ std::size_t findNewPositionInRange(std::size_t dw, std::size_t up,
     std::size_t mp = std::floor( (output + up)/2 );
 
     if ( Comparator(current_value, collection.at(mp)) ) {
-      up = mp; 
+      up = mp;
     } else {
       output = mp;
     }
 
     if (output == up or
-	up - output == 1)
+    up - output == 1)
       found = true;
   }
 
@@ -329,7 +348,7 @@ std::size_t findNewPositionInRange(std::size_t dw, std::size_t up,
 }
 
 void swap(std::vector<std::size_t>& collection,
-	  std::size_t current, std::size_t target)
+      std::size_t current, std::size_t target)
 {
   if (current == target) return;
 
