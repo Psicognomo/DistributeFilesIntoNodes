@@ -46,7 +46,6 @@ public:
   
   bool canAccept( const File& file ) const { return file.size() <= this->freeMemory(); }
   bool add( const File& file ) {
-    if ( not this->canAccept( file ) ) return false;
     m_occupiedMemory += file.size();
     return true;
   }
@@ -338,8 +337,8 @@ void swap(std::vector<std::size_t>& collection,
 {
   if (current == target) return;
 
-  std::size_t storage = collection.at(current);
+  std::size_t storage = collection[current];
   for (std::size_t m(current); m<target; m++)
-    collection.at(m) = collection.at(m+1);
-  collection.at(target) = storage;
+    collection[m] = collection[m+1];
+  collection[target] = storage;
 }
