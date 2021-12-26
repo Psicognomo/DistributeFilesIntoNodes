@@ -8,9 +8,6 @@
 #include <unordered_map>
 #include <cmath>
 
-#include <chrono>
-using namespace std::chrono;
-
 // ================================================================================================================ //
 
 class File {
@@ -68,7 +65,6 @@ private:
 
 int Usage();
 template< class T > bool processFile( const std::string&,std::vector<T>& );
-//void allocateNodes( std::unordered_map< std::string, std::string  >&,
 void allocateNodes(std::vector<std::size_t>&,
                    std::vector<File>&,
                    std::vector<Node>& );
@@ -81,9 +77,6 @@ void swap(std::vector<std::size_t>&, std::size_t, std::size_t);
 // ================================================================================================================ //
 
 int main( int narg, char* argv[] ) {
-  std::cout << "Running code ... " << std::endl;
-
-  auto start = high_resolution_clock::now();
 
   std::string inputFilesName = "";
   std::string inputNodesName = "";
@@ -153,7 +146,6 @@ int main( int narg, char* argv[] ) {
   // ================================================================================== //
   
   // Distributing...
-//  std::unordered_map< std::string, std::string > distributionPlan;
   std::vector<std::size_t> distributionPlan;
   distributionPlan.resize(listOfFiles.size(), listOfFiles.size());
   allocateNodes( distributionPlan, listOfFiles, listOfNodes );
@@ -176,10 +168,6 @@ int main( int narg, char* argv[] ) {
   }
   
   output.close();
-
-  auto stop = high_resolution_clock::now();
-  auto duration = duration_cast<milliseconds>(stop - start);
-  std::cout << duration.count() << " milli-seconds" << std::endl;
 }
 
 // ================================================================================================================ //
@@ -254,7 +242,6 @@ template< class T > bool processFile( const std::string& fileName,
   return true;
 }
 
-//void allocateNodes( std::unordered_map<std::string, std::string>& distributionPlan,
 void allocateNodes( std::vector<std::size_t>& distributionPlan,
                     std::vector<File>& listOfFiles,
                     std::vector<Node>& listOfNodes ) {
