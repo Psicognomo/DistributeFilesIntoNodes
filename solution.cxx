@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <unordered_map>
 #include <cmath>
+#include <numeric>
 
 // ================================================================================================================ //
 
@@ -18,7 +19,7 @@ public:
   ~File() = default;
 
   const std::string& name() const { return m_name; }
-  std::size_t size() const { return m_size; }
+  const std::size_t& size() const { return m_size; }
 
   void print( const std::string& indent = "" ) const {
     std::cout<<indent << "File '" << m_name <<"' (" << m_size <<  ")"<<std::endl;
@@ -35,18 +36,19 @@ public:
   Node() = delete;
   Node(std::string name, std::size_t size) :
     m_name( std::move(name) ), m_size( size ),
-    m_occupiedMemory( 0 ) {}
+    m_occupiedMemory( 0 ), m_freeMemory( size ) {}
   ~Node() = default;
 
   const std::string& name() const { return m_name; }
-  std::size_t size() const { return m_size; }
+  const std::size_t& size() const { return m_size; }
 
-  std::size_t occupiedMemory() const { return m_occupiedMemory; }
-  std::size_t freeMemory() const { return m_size - m_occupiedMemory; }
+  const std::size_t& occupiedMemory() const { return m_occupiedMemory; }
+  const std::size_t& freeMemory() const { return m_freeMemory; }
   
   bool canAccept( const File& file ) const { return file.size() <= this->freeMemory(); }
   bool add( const File& file ) {
     m_occupiedMemory += file.size();
+    m_freeMemory -= file.size();
     return true;
   }
 
@@ -58,12 +60,13 @@ private:
   std::string m_name;
   std::size_t m_size;
   std::size_t m_occupiedMemory;
+  std::size_t m_freeMemory;
 };
 
 // ================================================================================================================ //
 
 int Usage();
-template< class T > bool processFile( const std::string&,std::vector<T>& );
+template< class T > bool processFile(const std::string&,std::vector<T>&);
 void allocateNodes(std::vector<std::size_t>&,
                    std::vector<File>&,
                    std::vector<Node>& );
@@ -76,7 +79,8 @@ void swap(std::vector<std::size_t>&, std::size_t, std::size_t);
 // ================================================================================================================ //
 
 int main( int narg, char* argv[] ) {
-
+  std::cout << "Running code ... " << std::endl;
+  
   std::string inputFilesName = "";
   std::string inputNodesName = "";
   std::string outputName = "";
@@ -169,7 +173,7 @@ int main( int narg, char* argv[] ) {
   output.close();
 }
 
-// ================================================================================================================ //
+// ============================================================ //
 
 int Usage() {
 
@@ -244,52 +248,47 @@ template< class T > bool processFile( const std::string& fileName,
 void allocateNodes( std::vector<std::size_t>& distributionPlan,
                     std::vector<File>& listOfFiles,
                     std::vector<Node>& listOfNodes ) {
-
   
-  std::vector<std::size_t> indexes_files;
-  std::vector<std::size_t> indexes_nodes;
+  std::vector<std::size_t> indexes_files(listOfFiles.size());
+  std::vector<std::size_t> indexes_nodes(listOfNodes.size());
 
-  indexes_files.reserve(listOfFiles.size());
-  indexes_nodes.reserve(listOfNodes.size());
-  
-  for (std::size_t i(0); i < listOfFiles.size(); i++)
-    indexes_files.push_back(i);
-  for (std::size_t i(0); i < listOfNodes.size(); i++)
-    indexes_nodes.push_back(i);
+  std::iota(indexes_files.begin(), indexes_files.end(), 0);
+  std::iota(indexes_nodes.begin(), indexes_nodes.end(), 0);
 
   // Compare functions
   auto compareFiles = [&listOfFiles] (std::size_t elA, std::size_t elB) -> bool
               {
-            return listOfFiles.at(elA).size() > listOfFiles.at(elB).size();
+            return listOfFiles[elA].size() > listOfFiles[elB].size();
               };
   
   auto compareNodes = [&listOfNodes] (std::size_t elA, std::size_t elB) -> bool
               {
-            const auto& NodeA = listOfNodes.at(elA);
-            const auto& NodeB = listOfNodes.at(elB);
+            const auto& NodeA = listOfNodes[elA];
+            const auto& NodeB = listOfNodes[elB];
             if ( NodeA.occupiedMemory() < NodeB.occupiedMemory() ) return true;
             if ( NodeA.occupiedMemory() > NodeB.occupiedMemory() ) return false;
-            if ( NodeA.freeMemory() > NodeB.freeMemory() ) return true;
-            return false;
+            return NodeA.freeMemory() > NodeB.freeMemory();
               };
   
   // Sort Files in decresing order (size). Big files first.
-  std::sort( indexes_files.begin(), indexes_files.end(),
-         compareFiles );
+  std::sort(indexes_files.begin(),
+            indexes_files.end(),
+            compareFiles );
   
   // Sort Nodes according to node memory. Nodes with big occupied memory last.
   // In case of two nodes with same occupied memory, the node with big free memory goes first.
-  std::sort( indexes_nodes.begin(), indexes_nodes.end(),
-         compareNodes );
+  std::sort(indexes_nodes.begin(),
+            indexes_nodes.end(),
+            compareNodes );
 
   // Running on files
   for ( std::size_t idx_f : indexes_files ) {
-    const auto &file = listOfFiles.at(idx_f);
+    const auto &file = listOfFiles[idx_f];
 
     // Running on Nodes to allocate the file
     for ( std::size_t j(0); j<indexes_nodes.size(); j++ ) {
-      std::size_t idex_n_current = indexes_nodes.at(j);
-      auto& node = listOfNodes.at(idex_n_current);
+      std::size_t idex_n_current = indexes_nodes[j];
+      auto& node = listOfNodes[idex_n_current];
 
       if ( not node.canAccept( file ) ) continue;
       node.add( file );
@@ -312,20 +311,19 @@ std::size_t findNewPositionInRange(std::size_t dw, std::size_t up,
                                    const comparator_t& Comparator)
 {
   std::size_t output = dw;
-  std::size_t current_value = collection.at(dw);
-
+  std::size_t mp = 0;
+  
   bool found = false;
   while (not found) {
-    std::size_t mp = std::floor( (output + up)/2 );
+    mp = (output + up)/2;
 
-    if ( Comparator(current_value, collection.at(mp)) ) {
+    if ( Comparator(collection[dw], collection[mp]) ) {
       up = mp;
     } else {
       output = mp;
     }
 
-    if (output == up or
-    up - output == 1)
+    if (up - output <= 1)
       found = true;
   }
 
